@@ -38,7 +38,6 @@ function setup(){
 	createCanvas(AREA_WIDTH + CONFIG_WIDTH, AREA_HEIGHT);
   colorMode(HSB, 100);
 	noStroke();
-	angleMode(DEGREES);
   mySystem = new System();
 
   ptn0();
@@ -69,9 +68,15 @@ class Ball{
 	}
 	applyReflection(){
 		if(this.position.x < this.radius || this.position.x > AREA_WIDTH - this.radius){
-			this.velocity = reflection(this.velocity, createVector(1, 0));
+			const collisionPlaneNormalVectorX = createVector(1, 0);
+			const distanceWithWall = (this.position.x < this.radius ? this.position.x : AREA_WIDTH - this.position.x);
+			positionAdjustment(this.position, this.velocity, collisionPlaneNormalVectorX, distanceWithWall, this.radius);
+			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorX);
 		}else if(this.position.y < this.radius || this.position.y > AREA_HEIGHT - this.radius){
-			this.velocity = reflection(this.velocity, createVector(0, 1));
+			const collisionPlaneNormalVectorY = createVector(0, 1);
+			const distanceWithWall = (this.position.y < this.radius ? this.position.y : AREA_HEIGHT - this.position.y);
+			positionAdjustment(this.position, this.velocity, collisionPlaneNormalVectorY, distanceWithWall, this.radius);
+			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorY);
 		}
 	}
 	applyFriction(){
@@ -105,8 +110,19 @@ function perfectCollision(_ball, _other){
 	let u = p5.Vector.sub(_ball.velocity, g);
 	let v = p5.Vector.sub(_other.velocity, g);
 	const collisionPlaneNormalVector = p5.Vector.sub(_ball.position, _other.position);
-	u = reflection(u, collisionPlaneNormalVector);
-	v = reflection(v, collisionPlaneNormalVector);
+	// ここに位置の調整を挟む
+	// 双方が接するように位置を後退させる、割と複雑な処理。
+	// 具体的にはダブった時の中心同士の中点から中心を重心ベースの速度に沿って後退させて半径だけ離れたところまでもっていく感じ。そうすると接する。
+	const distanceWithWall = p5.Vector.dist(_ball.position, _other.position) / 2;
+	const c = abs(p5.Vector.dot(u, collisionPlaneNormalVector)) / (u.mag() * collisionPlaneNormalVector.mag());
+	const multiplier = sqrt(_ball.radius * _ball.radius - distanceWithWall * distanceWithWall * (1 - c * c));
+	const adjustedDistance = distanceWithWall * (1 - c * c) + c * multiplier;
+	positionAdjustment(_ball.position, u, collisionPlaneNormalVector, distanceWithWall, adjustedDistance);
+	positionAdjustment(_other.position, v, collisionPlaneNormalVector, distanceWithWall, adjustedDistance);
+	// 位置が変わったので接触面の法線ベクトルを再計算しないといけない。
+  const newNormalVector = p5.Vector.sub(_ball.position, _other.position);
+	u = reflection(u, newNormalVector);
+	v = reflection(v, newNormalVector);
 	_ball.velocity = p5.Vector.add(u, g);
 	_other.velocity = p5.Vector.add(v, g);
 }
@@ -118,11 +134,30 @@ function getCenterVector(_ball, _other){
 	return p5.Vector.mult(p5.Vector.add(u, v), multiplier);
 }
 
-function reflection(v, e){
-	// eは壁の法線ベクトル(normalVector)。これにより反射させる。
-	// eとして、v→v - 2(v・e)eという計算を行う。
-	// eが単位ベクトルでもいいように大きさの2乗（e・e）で割るか・・（collisionでも使うので）
-	return p5.Vector.sub(v, p5.Vector.mult(p5.Vector.mult(e, 2), p5.Vector.dot(v, e) / p5.Vector.dot(e, e)));
+// distanceWithWallは壁との衝突の場合は壁に応じてそれとpositionの垂直距離、
+// 衝突の場合は相手とのpositionの差を2で割ったものとする。
+
+// どうもね、衝突の場合は重心座標系でやらないとだめっぽいね。
+// 当たり前といえば当たり前だ・・だって重心座標系にしたから壁の反射で計算できてるんでしょ。
+// だからそれ相応の速度を使わないとね・・。
+
+// 衝突の場合は_ball.radiusではなくて、・・壁の場合はadjustedDistanceは普通に半径でいいんだけど、
+// 衝突では位置ずらした時に接していないといけなくってそこら辺でバグってるみたい。
+function positionAdjustment(p, v, n, d, adjDist){
+	// d:distanceWithWall.
+	// 要するにめりこみ処理・・うまくいくか知らないけど。_ballの速度の情報を元に位置をずらす感じですかね。subで。
+	// 計算によると長さが(radius - distanceWithWall)x|v||n|/|(v・n)|で方向はvと同じ。
+	// だから計算上は_ballのvに(r-d)*|n|/|(v・n)|を掛ける形になる。可読性は落ちるけど。
+	const multiplier = (adjDist - d) * n.mag() / abs(p5.Vector.dot(v, n));
+	p.sub(p5.Vector.mult(v, multiplier));
+	// 大丈夫？？
+}
+
+function reflection(v, n){
+	// nは壁の法線ベクトル(normalVector)。これにより反射させる。
+	// nとして、v→v - 2(v・n)nという計算を行う。
+	// nが単位ベクトルでもいいように大きさの2乗（n・n）で割るか・・（collisionでも使うので）
+	return p5.Vector.sub(v, p5.Vector.mult(p5.Vector.mult(n, 2), p5.Vector.dot(v, n) / p5.Vector.dot(n, n)));
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
@@ -193,7 +228,7 @@ function mouseReleased(){
 // はい。冗談おわり。デバッグしようね・・・
 
 function ptn0(){
-  let b_self = new Ball(AREA_WIDTH * 0.47, AREA_WIDTH * 0.2, 0);
+  let b_self = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.2, 0);
   let b_top = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.7, 10);
   let b1 = new Ball(AREA_WIDTH * 0.45, AREA_WIDTH * 0.8, 1);
   let b2 = new Ball(AREA_WIDTH * 0.55, AREA_WIDTH * 0.8, 1);
@@ -204,10 +239,23 @@ function ptn0(){
   let b7 = new Ball(AREA_WIDTH * 0.45, AREA_WIDTH * 1.0, 3);
   let b8 = new Ball(AREA_WIDTH * 0.55, AREA_WIDTH * 1.0, 3);
   let b9 = new Ball(AREA_WIDTH * 0.65, AREA_WIDTH * 1.0, 3);
+	let b10 = new Ball(AREA_WIDTH * 0.3, AREA_WIDTH * 1.1, 4);
+  let b11 = new Ball(AREA_WIDTH * 0.4, AREA_WIDTH * 1.1, 4);
+  let b12 = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 1.1, 4);
+  let b13 = new Ball(AREA_WIDTH * 0.6, AREA_WIDTH * 1.1, 4);
+  let b14 = new Ball(AREA_WIDTH * 0.7, AREA_WIDTH * 1.1, 4);
 
-  b_self.setVelocity(25, 90);
-  mySystem.balls = [b_self, b_top, b1, b2, b3, b4, b5, b6, b7, b8, b9];
+  b_self.setVelocity(35, PI / 2 - 0.1);
+  mySystem.balls = [b_self, b_top, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14];
 }
 
 // だめだ。めり込み処理やらないとおかしなことになる（特に見栄えが）。
 // ちゃんと動いてるけどね・・きびしいな・・・
+
+// 重心座標系でやるの？なるほど・・なんかおかしいと思った。じゃあuとvをそういうものとしてやるのね。んー・・むぅ。
+// よく考えたら速度についてはいじってないんだっけね。
+
+// だからー、壁の場合はそのままでいいんだけど、ぶつかる場合は、positionのずらし方を変える。
+// 接するところまで戻す。で、そのうえで接触面を計算して、反射させるんだね（複雑・・）
+
+// 多分接するところまで戻せたはず。さて、本題に入るんだが・・（気力）
