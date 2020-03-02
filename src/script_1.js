@@ -227,6 +227,8 @@ function collisionCheck(_ball, _other){
 // 最後に重心ベクトルを足しなおせば完成（のはず）
 function perfectCollision(_ball, _other){
 	// ballとotherが衝突したときの速度の変化を記述する（面倒なので完全弾性衝突で）
+	// その前に、双方が下限速度の場合は何もしないこととする。
+	if(_ball.velocity.mag() < SPEED_LOWER_LIMIT && _other.velocity.mag() < SPEED_LOWER_LIMIT){ return; }
 	// 重心ベクトル
 	const g = getCenterVector(_ball, _other);
 	// 相対速度
@@ -237,6 +239,7 @@ function perfectCollision(_ball, _other){
 	// 双方が接するように位置を後退させる、割と複雑な処理。
 	// 具体的にはダブった時の中心同士の中点から中心を重心ベースの速度に沿って後退させて半径だけ離れたところまでもっていく感じ。そうすると接する。
 	const distanceWithWall = p5.Vector.dist(_ball.position, _other.position) / 2;
+	// どうもこのu.mag()が0になってるのがまずかったっぽい。
 	const c = abs(p5.Vector.dot(u, collisionPlaneNormalVector)) / (u.mag() * collisionPlaneNormalVector.mag());
 	const multiplier = sqrt(_ball.radius * _ball.radius - distanceWithWall * distanceWithWall * (1 - c * c));
 	const adjustedDistance = distanceWithWall * (1 - c * c) + c * multiplier;
