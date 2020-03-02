@@ -30,7 +30,8 @@ const BALL_RADIUS = AREA_WIDTH * 0.045; // ボールの半径は0.045くらい�
 const FRICTION_COEFFICIENT = 0.01; // 摩擦の大きさ
 const SPEED_LOWER_LIMIT = 0.1; // 速さの下限（これ以下になったら0として扱う）
 
-const BALL_HUE_PALLETE = [66, 75, 84, 93, 2, 11, 20, 29, 38, 47, 56]; // 11種類
+const BALL_HUE_PALLETE = [66, 77, 88, 0, 11, 22, 33, 44, 55]; // 9種類
+const BALL_CAPACITY = 20; // 20個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
 // 0:ADD, 1:MOVE, 2:DELETE.
@@ -105,7 +106,12 @@ class System{
 		this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
+		this.ballColorId = 0;
+		this.ballMassFactor = 1.0;
   }
+	getModeId(){
+		return this.modeId;
+	}
 	createButtons(){
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
@@ -126,9 +132,14 @@ class System{
 		}
 		this.buttons[this.modeId].activate();
 	}
+	addBallCheck(x, y){
+		// (x, y)の位置を中心とするある程度の半径のボールが出現させられるかどうか。
+		// 具体的には既存のボールと位置が一定以上かぶらないこと、さらに壁にめり込まないことが条件。trueかfalseを返すbool値の関数。
+		// 今日はここまで
+	}
   addBall(x, y, colorId = 0, mf = 1.0){
     // Ballを追加する
-    this.balls.push(new Ball(x, y, colorId, mf));
+    this.balls.push(new Ball(x, y, this.ballColorId, this.ballMassFactor));
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
@@ -296,6 +307,18 @@ function reflection(v, n){
 
 function mousePressed(){
 	mySystem.activateButton();
+	if(mouseX > AREA_WIDTH){ return; }
+	switch(mySystem.getModeId()){
+		case 0:
+		  /* ADD */
+			break;
+		case 1:
+		  /* MOVE */
+			break;
+		case 2:
+		  /* DELETE */
+			break;
+	}
   return;
 }
 
@@ -329,7 +352,7 @@ function createConfigGraphic(){
 
 function ptn0(){
   let b_self = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.2, 0);
-  let b_top = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.7, 10);
+  let b_top = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.7, 8);
   let b1 = new Ball(AREA_WIDTH * 0.45, AREA_WIDTH * 0.8, 1);
   let b2 = new Ball(AREA_WIDTH * 0.55, AREA_WIDTH * 0.8, 1);
   let b3 = new Ball(AREA_WIDTH * 0.4, AREA_WIDTH * 0.9, 2);
