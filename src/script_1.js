@@ -33,7 +33,7 @@ const SPEED_LOWER_LIMIT = 0.1; // 速さの下限（これ以下になったら0
 const BALL_HUE_PALLETE = [66, 75, 84, 93, 2, 11, 20, 29, 38, 47, 56]; // 11種類
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
-// モードは文字列にする。
+// 0:ADD, 1:MOVE, 2:DELETE.
 
 function setup(){
 	createCanvas(AREA_WIDTH + CONFIG_WIDTH, AREA_HEIGHT);
@@ -101,7 +101,7 @@ class Ball{
 class System{
   constructor(){
     this.balls = [];
-		this.mode = "ADD";
+		this.modeId = 0;
 		this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
@@ -113,7 +113,18 @@ class System{
 		this.buttons.push(new ModeButton(w * 0.025, h * 0.75, w * 0.3, h * 0.08, "ADD"));
 		this.buttons.push(new ModeButton(w * 0.35, h * 0.75, w * 0.3, h * 0.08, "MOV"));
 		this.buttons.push(new ModeButton(w * 0.675, h * 0.75, w * 0.3, h * 0.08, "DEL"));
-		this.buttons[0].activate(); // ADD_MODE.
+		this.buttons[this.modeId].activate(); // ADD_MODE.
+	}
+	activateButton(){
+    const x = mouseX - AREA_WIDTH;
+		const y = mouseY;
+		if(x < 0 || x > CONFIG_WIDTH || y < 0 || y > AREA_HEIGHT){ return; }
+    // 一旦activeになってるところをinActivateしたうえで、必要なら更新して、それからactivateする。
+		this.buttons[this.modeId].inActivate();
+		for(let i = 0; i < this.buttons.length; i++){
+			if(this.buttons[i].hit(x, y)){ this.modeId = i; }
+		}
+		this.buttons[this.modeId].activate();
 	}
   addBall(x, y, colorId = 0, mf = 1.0){
     // Ballを追加する
@@ -184,6 +195,9 @@ class ModeButton{
 	}
 	activate(){
 		this.active = true;
+	}
+	inActivate(){
+		this.active = false;
 	}
 	hit(x, y){
 		// クリック位置がボタンに触れてるかどうかをこれで判定する。
@@ -278,6 +292,7 @@ function reflection(v, n){
 // 削除モードの時にクリックするとボールがなければ空振り、あればそれを排除する。
 
 function mousePressed(){
+	mySystem.activateButton();
   return;
 }
 
