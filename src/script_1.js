@@ -33,6 +33,7 @@ const SPEED_LOWER_LIMIT = 0.1; // 速さの下限（これ以下になったら0
 const BALL_HUE_PALLETE = [66, 75, 84, 93, 2, 11, 20, 29, 38, 47, 56]; // 11種類
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
+// モードは文字列にする。
 
 function setup(){
 	createCanvas(AREA_WIDTH + CONFIG_WIDTH, AREA_HEIGHT);
@@ -44,7 +45,6 @@ function setup(){
 }
 
 function draw(){
-	background(70);
   mySystem.update();
   mySystem.applyCollide();
   mySystem.draw();
@@ -94,6 +94,115 @@ class Ball{
 		circle(this.position.x, this.position.y, this.radius * 2);
 	}
 }
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// System.
+
+class System{
+  constructor(){
+    this.balls = [];
+		this.mode = "ADD";
+		this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
+		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
+	  this.createButtons();
+  }
+	createButtons(){
+		const w = CONFIG_WIDTH;
+		const h = AREA_HEIGHT;
+		this.buttons = [];
+		this.buttons.push(new ModeButton(w * 0.025, h * 0.75, w * 0.3, h * 0.08, "ADD"));
+		this.buttons.push(new ModeButton(w * 0.35, h * 0.75, w * 0.3, h * 0.08, "MOV"));
+		this.buttons.push(new ModeButton(w * 0.675, h * 0.75, w * 0.3, h * 0.08, "DEL"));
+		this.buttons[0].activate(); // ADD_MODE.
+	}
+  addBall(x, y, colorId = 0, mf = 1.0){
+    // Ballを追加する
+    this.balls.push(new Ball(x, y, colorId, mf));
+  }
+  findBall(x, y){
+    // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
+    for(let i = 0; i < this.balls.length; i++){
+      const _ball = this.balls[i];
+      if(dist(_ball.position.x, _ball.position.y, x, y) < _ball.radius){ return i; }
+    }
+    return -1;
+  }
+  deleteBall(id){
+    // Ballを削除する
+    this.balls.splice(id, 1);
+  }
+  update(){
+    for(let b of this.balls){ b.update(); }
+  }
+  applyCollide(){
+    for(let ballId = 0; ballId < this.balls.length; ballId++){
+  		const _ball = this.balls[ballId];
+  		for(let otherId = ballId + 1; otherId < this.balls.length; otherId++){
+  			const _other = this.balls[otherId];
+  			if(!collisionCheck(_ball, _other)){ continue; }
+  			perfectCollision(_ball, _other);
+  		}
+  	}
+  }
+  draw(){
+		image(this.boardGraphic, 0, 0);
+    for(let b of this.balls){ b.draw(); }
+    this.drawConfig();
+  }
+  drawConfig(){
+		// ここでconfigGraphicをいじる、というかここは毎フレーム描く。
+		let gr = this.configGraphic;
+		gr.background(70);
+		const w = CONFIG_WIDTH;
+		const h = AREA_HEIGHT;
+		// 全部同じ色でいいよ。茶色かなんかで。で、違うときは暗くする。
+		// これでいいんだけど、今まで通りのこの方法だとマウスクリックとの紐付けが非常に面倒なので、何とかしたいです。
+		// ボタンをクラス化しました～
+		gr.textSize(h * 0.04);
+		gr.textAlign(CENTER, CENTER);
+		for(let btn of this.buttons){
+			btn.draw(gr);
+		}
+		image(this.configGraphic, AREA_WIDTH, 0);
+  }
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// ModeButton.
+// ADD:ボールを追加する。
+// MOV:ボールを動かす。
+// DEL:ボールを削除する。
+
+class ModeButton{
+	constructor(left, top, w, h, _modeText){
+		this.left = left;
+		this.top = top;
+		this.w = w;
+		this.h = h;
+		this.modeText = _modeText;
+		this.active = false;
+	}
+	activate(){
+		this.active = true;
+	}
+	hit(x, y){
+		// クリック位置がボタンに触れてるかどうかをこれで判定する。
+		return this.left < x && x < this.left + this.w && this.top < y && y < this.top + this.h;
+	}
+	draw(gr){
+		if(this.active){
+			gr.fill(10, 100, 100);
+		}else{
+			gr.fill(10, 100, 50);
+		}
+		gr.rect(this.left, this.top, this.w, this.h);
+		gr.fill(0);
+		gr.text(this.modeText, this.left + (this.w / 2), this.top + (this.h / 2));
+	}
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// Functions for collide.
 
 function collisionCheck(_ball, _other){
   return p5.Vector.dist(_ball.position, _other.position) < _ball.radius + _other.radius;
@@ -161,52 +270,6 @@ function reflection(v, n){
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
-// System.
-
-class System{
-  constructor(){
-    this.balls = [];
-  }
-  addBall(x, y, colorId = 0, mf = 1.0){
-    // Ballを追加する
-    this.balls.push(new Ball(x, y, colorId, mf));
-  }
-  findBall(x, y){
-    // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
-    for(let i = 0; i < this.balls.length; i++){
-      const _ball = this.balls[i];
-      if(dist(_ball.position.x, _ball.position.y, x, y) < _ball.radius){ return i; }
-    }
-    return -1;
-  }
-  removeBall(id){
-    // Ballを排除する
-    this.balls.splice(id, 1);
-  }
-  update(){
-    for(let b of this.balls){ b.update(); }
-  }
-  applyCollide(){
-    for(let ballId = 0; ballId < this.balls.length; ballId++){
-  		const _ball = this.balls[ballId];
-  		for(let otherId = ballId + 1; otherId < this.balls.length; otherId++){
-  			const _other = this.balls[otherId];
-  			if(!collisionCheck(_ball, _other)){ continue; }
-  			perfectCollision(_ball, _other);
-  		}
-  	}
-  }
-  draw(){
-    for(let b of this.balls){ b.draw(); }
-    this.drawConfig();
-  }
-  drawConfig(){
-    fill(30);
-    rect(AREA_WIDTH, 0, CONFIG_WIDTH, AREA_HEIGHT);
-  }
-}
-
-// -------------------------------------------------------------------------------------------------------------------- //
 // Interaction.
 // 何もないところをクリックした場合、他のボールと衝突しないようなら（壁にめり込んでもダメ）ボールを発生させることができる。
 // モードが追加になってる場合、クリック位置にボールがあればpositionとの紐付けが開始されて、マウス位置に向かう。
@@ -220,6 +283,25 @@ function mousePressed(){
 
 function mouseReleased(){
   return;
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// Graphics.
+
+function createBoardGraphic(){
+	let gr = createGraphics(AREA_WIDTH, AREA_HEIGHT);
+	gr.colorMode(HSB, 100);
+	gr.noStroke();
+	gr.fill(47, 30, 100);
+	gr.rect(0, 0, AREA_WIDTH, AREA_HEIGHT);
+	return gr;
+}
+
+function createConfigGraphic(){
+	let gr = createGraphics(CONFIG_WIDTH, AREA_HEIGHT);
+	gr.colorMode(HSB, 100);
+	gr.noStroke();
+	return gr;
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
