@@ -27,11 +27,12 @@ let mySystem;
 const AREA_WIDTH =  360;
 const AREA_HEIGHT = AREA_WIDTH * 1.5;
 const BALL_RADIUS = AREA_WIDTH * 0.045; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
+const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.005; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
 const FRICTION_COEFFICIENT = 0.01; // 摩擦の大きさ
 const SPEED_LOWER_LIMIT = 0.1; // 速さの下限（これ以下になったら0として扱う）
 
 const BALL_HUE_PALLETE = [66, 77, 88, 0, 11, 22, 33, 44, 55]; // 9種類
-const BALL_CAPACITY = 20; // 20個まで増やせるみたいな。
+const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
 // 0:ADD, 1:MOVE, 2:DELETE.
@@ -133,11 +134,18 @@ class System{
 		this.buttons[this.modeId].activate();
 	}
 	addBallCheck(x, y){
+		// 最初に個数の確認
+		if(this.balls.length > BALL_CAPACITY){ return false; }
 		// (x, y)の位置を中心とするある程度の半径のボールが出現させられるかどうか。
 		// 具体的には既存のボールと位置が一定以上かぶらないこと、さらに壁にめり込まないことが条件。trueかfalseを返すbool値の関数。
-		// 今日はここまで
+    for(let b of this.balls){
+			if(dist(b.position.x, b.position.y, x, y) < BALL_RADIUS * 2 + BALL_APPEAR_MARGIN){ return false; }
+			if(x < BALL_RADIUS + BALL_APPEAR_MARGIN || x > AREA_WIDTH - BALL_RADIUS - BALL_APPEAR_MARGIN){ return false; }
+			if(y < BALL_RADIUS + BALL_APPEAR_MARGIN || y > AREA_HEIGHT - BALL_RADIUS - BALL_APPEAR_MARGIN){ return false; }
+			return true;
+		}
 	}
-  addBall(x, y, colorId = 0, mf = 1.0){
+  addBall(x, y){
     // Ballを追加する
     this.balls.push(new Ball(x, y, this.ballColorId, this.ballMassFactor));
   }
@@ -195,6 +203,11 @@ class System{
 // MOV:ボールを動かす。
 // DEL:ボールを削除する。
 
+// 提案なんだけどアニメーションつけないかい？
+// 30フレームくらいの。で、アニメーションが終わったらactivate, inActivateする
+// アニメーション中に他をクリックしちゃったらとかあるのでモードチェンジの際にアニメを切れるようにする。
+// まあもろもろ揃えてからでいいよ。
+
 class ModeButton{
 	constructor(left, top, w, h, _modeText){
 		this.left = left;
@@ -215,6 +228,7 @@ class ModeButton{
 		return this.left < x && x < this.left + this.w && this.top < y && y < this.top + this.h;
 	}
 	draw(gr){
+		// activeでないときは色を暗くする。
 		if(this.active){
 			gr.fill(10, 100, 100);
 		}else{
@@ -306,11 +320,15 @@ function reflection(v, n){
 // 削除モードの時にクリックするとボールがなければ空振り、あればそれを排除する。
 
 function mousePressed(){
+	const x = mouseX;
+	const y = mouseY;
 	mySystem.activateButton();
-	if(mouseX > AREA_WIDTH){ return; }
+	// 各種色変え、重さ替えなど。色変えは普通にパレット。重さ替えは灰色のグラデーションで数字書いてね。
+	if(x > AREA_WIDTH){ return; }
 	switch(mySystem.getModeId()){
 		case 0:
 		  /* ADD */
+			if(mySystem.addBallCheck(x, y)){ mySystem.addBall(x, y); }
 			break;
 		case 1:
 		  /* MOVE */
