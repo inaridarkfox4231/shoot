@@ -112,7 +112,8 @@ class System{
   constructor(){
     this.balls = [];
 		this.modeId = 0;
-		this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
+		//this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
+		this.boardGraphics = createBoardGraphics(); // 背景工夫したいねって
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
 		this.shooter = new BallShooter();
@@ -233,7 +234,7 @@ class System{
   	}
   }
   draw(){
-		image(this.boardGraphic, 0, 0);
+		image(this.boardGraphics[0], 0, 0);
     for(let b of this.balls){ b.draw(); }
     this.shooter.draw(); // うまくいくか
     this.drawConfig();
@@ -509,12 +510,105 @@ function mouseReleased(){
 // Graphics.
 
 // 背景。
-function createBoardGraphic(){
-	let gr = createGraphics(AREA_WIDTH, AREA_HEIGHT);
+function createBoardGraphics(){
+	let grArray = [];
+	const w = AREA_WIDTH;
+	const h = AREA_HEIGHT;
+	grArray.push(rectLikeBoard(w, h));
+	grArray.push(triLikeBoard(w, h));
+	grArray.push(diaLikeBoard(w, h));
+	grArray.push(starLikeBoard(w, h));
+	grArray.push(ellipseLikeBoard(w, h));
+	return grArray;
+}
+
+// 背景いろいろ～
+// 長方形ぐるぐる
+function rectLikeBoard(w, h){
+	let gr = createGraphics(w, h);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
-	gr.fill(47, 30, 100);
-	gr.rect(0, 0, AREA_WIDTH, AREA_HEIGHT);
+	gr.rectMode(CENTER);
+	gr.translate(w / 2, h / 2);
+	for(let i = 0; i < 100; i++){
+		let prg = i / 100;
+		gr.fill(70, 90 * (1 - prg), 100);
+		gr.rect(0, 0, w * (1 - prg), h * (1 - prg));
+		gr.rotate(2 * PI * random(0.05, 0.15));
+	}
+	return gr;
+}
+
+// 三角形ぐるぐる
+function triLikeBoard(w, h){
+	let gr = createGraphics(w, h);
+	gr.colorMode(HSB, 100);
+	gr.noStroke();
+	gr.translate(w / 2, h / 2);
+	const maxLength = sqrt(w * w + h * h);
+	for(let i = 0; i < 100; i++){
+		let prg = i / 100;
+		gr.fill(54, 100 * (1 - prg * prg), 100);
+		const a = maxLength * (1 - prg);
+		gr.triangle(a, 0, a * cos(PI * 2 / 3), a * sin(PI * 2 / 3), a * cos(PI * 4 / 3), a * sin(PI * 4 / 3));
+		gr.rotate(2 * PI * random(0.1, 0.2));
+	}
+	return gr;
+}
+
+// ダイヤぐるぐる
+function diaLikeBoard(w, h){
+	let gr = createGraphics(w, h);
+	gr.colorMode(HSB, 100);
+	gr.noStroke();
+	gr.translate(w / 2, h / 2);
+	for(let i = 0; i < 100; i++){
+		let prg = i / 100;
+		gr.fill(5, 100 * (1 - prg * prg), 100);
+		const w1 = w * (1 - prg);
+		const h1 = h * (1 - prg);
+		gr.quad(w1, 0, 0, h1, -w1, 0, 0, -h1);
+		gr.rotate(2 * PI * random(0.05, 0.15));
+	}
+	return gr;
+}
+
+// 星型ぐるぐる
+function starLikeBoard(w, h){
+	let gr = createGraphics(w, h);
+	gr.colorMode(HSB, 100);
+	gr.noStroke();
+	gr.translate(w / 2, h / 2);
+	const maxLength = 0.5 * sqrt(w * w + h * h);
+	for(let i = 0; i < 100; i++){
+		let prg = i / 100;
+		gr.fill(82, 100 * (1 - prg * prg), 100);
+    const a = maxLength * (1 - prg) / sin(PI / 10);
+		const b = maxLength * (1 - prg) / cos(PI / 5);
+    let p = [];
+		for(let t = 0; t < 5; t++){
+			p.push({x:a * sin(2 * PI * t / 5), y:a * cos(2 * PI * t / 5)});
+		}
+		p.push({x:0, y:-b});
+		gr.triangle(p[1].x, p[1].y, p[4].x, p[4].y, p[5].x, p[5].y);
+		gr.quad(p[0].x, p[0].y, p[2].x, p[2].y, p[5].x, p[5].y, p[3].x, p[3].y);
+		gr.rotate(2 * PI * random(0.15, 0.2));
+	}
+	return gr;
+}
+
+// 楕円ぐるぐる
+function ellipseLikeBoard(w, h){
+	let gr = createGraphics(w, h);
+	gr.colorMode(HSB, 100);
+	gr.noStroke();
+	gr.translate(w / 2, h / 2);
+	for(let i = 0; i < 100; i++){
+		let prg = i / 100;
+		gr.fill(91, 100 * (1 - prg), 100);
+		gr.ellipse(0, 0, w * 2 * (1 - prg), h * 2 * (1 - prg));
+		gr.rotate(2 * PI * random(0.25, 0.35));
+	}
 	return gr;
 }
 
