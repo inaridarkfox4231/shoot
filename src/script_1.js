@@ -31,6 +31,9 @@ const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.005; // ボールの直径が0.1の中
 const FRICTION_COEFFICIENT = 0.01; // 摩擦の大きさ
 const SPEED_LOWER_LIMIT = 0.1; // 速さの下限（これ以下になったら0として扱う）
 
+const SPEED_UPPER_LIMIT = 30.0; // セットするスピードの上限
+const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
+
 const BALL_HUE_PALLETE = [66, 77, 88, 0, 11, 22, 33, 44, 55]; // 9種類
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
@@ -107,6 +110,7 @@ class System{
 		this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
+		this.shooter = new BallShooter();
 		this.ballColorId = 0;
 		this.ballMassFactor = 1.0;
   }
@@ -157,7 +161,17 @@ class System{
     }
     return -1;
   }
-  deleteBall(id){
+	setShootingBall(id){
+		// id番のボールをセットする。
+		this.shooter.setTarget(this.balls[id]);
+		//console.log(this.balls[id]);
+		//console.log(this.shooter.target);
+	}
+	shootBall(){
+		// セットしたボールを離す。
+		this.shooter.shoot();
+	}
+	deleteBall(id){
     // Ballを削除する
     this.balls.splice(id, 1);
   }
@@ -177,6 +191,7 @@ class System{
   draw(){
 		image(this.boardGraphic, 0, 0);
     for(let b of this.balls){ b.draw(); }
+    this.shooter.draw(); // うまくいくか
     this.drawConfig();
   }
   drawConfig(){
@@ -237,6 +252,65 @@ class ModeButton{
 		gr.rect(this.left, this.top, this.w, this.h);
 		gr.fill(0);
 		gr.text(this.modeText, this.left + (this.w / 2), this.top + (this.h / 2));
+	}
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// BallShooter.
+// 煩雑になりそうなのでコンポジットにします（その方がいい）（カオスになる）
+
+// activeが解除されるのはマウスリリース時。矢印はマウス位置が・・あ、なるほど。
+class BallShooter{
+  constructor(){
+		this.target = undefined;
+		this.active = false;
+	}
+	isActive(){
+		return this.active; // リリースの時にここを見てactiveならshootする。
+	}
+	setTarget(_ball){
+		this.target = _ball;
+		this.active = true;
+	}
+	release(){
+		this.active = false;
+		this.target = undefined;
+	}
+	getArrowLength(){
+		// 矢印の長さを計算する。ターゲットの中心からマウスまでの距離ーBALL_RADIUSで上限は横幅の6割。
+		return min(dist(this.target.position.x, this.target.position.y, mouseX, mouseY), ARROWLENGTH_LIMIT) - BALL_RADIUS;
+	}
+	shoot(){
+		// activeでないときは何もしない。
+		if(!this.active){ return; }
+		// ボールにスピードをセットするメソッド
+    const arrowLength = this.getArrowLength();
+		if(arrowLength <= 0){ return; }
+		const speed = arrowLength * SPEED_UPPER_LIMIT / ARROWLENGTH_LIMIT;
+		const direction = atan2(mouseY - this.target.position.y, mouseX - this.target.position.x);
+		this.target.setVelocity(speed, direction);
+		this.release();
+	}
+	draw(){
+		if(!this.active){ return; }
+		// 長さの上限はAREA_WIDTH * 0.6（必要なら定数化するけど）.
+		const arrowLength = this.getArrowLength();
+		if(arrowLength <= 0){ return; }
+		const direction = atan2(mouseY - this.target.position.y, mouseX - this.target.position.x);
+		let start = createVector(BALL_RADIUS * cos(direction), BALL_RADIUS * sin(direction));
+		let end = createVector((BALL_RADIUS + arrowLength) * cos(direction), (BALL_RADIUS + arrowLength) * sin(direction));
+		start.add(this.target.position);
+		end.add(this.target.position);
+		stroke(0);
+		strokeWeight(2.0);
+		line(start.x, start.y, end.x, end.y);
+    let upperArrow = createVector((arrowLength * 0.1) * cos(direction + PI * 0.85), (arrowLength * 0.1) * sin(direction + PI * 0.85));
+		let lowerArrow = createVector((arrowLength * 0.1) * cos(direction - PI * 0.85), (arrowLength * 0.1) * sin(direction - PI * 0.85));
+		upperArrow.add(end);
+		lowerArrow.add(end);
+		line(end.x, end.y, upperArrow.x, upperArrow.y);
+		line(end.x, end.y, lowerArrow.x, lowerArrow.y);
+		noStroke();
 	}
 }
 
@@ -313,12 +387,13 @@ function reflection(v, n){
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Interaction.
-// 何もないところをクリックした場合、他のボールと衝突しないようなら（壁にめり込んでもダメ）ボールを発生させることができる。
-// モードが追加になってる場合、クリック位置にボールがあればpositionとの紐付けが開始されて、マウス位置に向かう。
-// 押し下げ位置があって、そのあとのマウス位置に向かうんだけど、ボールから出る矢印は、「現在のposition」から「押し下げた瞬間のpositionまでのベクトル」と
-// 「押し下げ位置」から「マウス位置」までのベクトルを足したものになる。ここやや複雑なので注意。これを現在のpositionから引く。
+// 追加モードで何もないところをクリックした場合、他のボールと衝突しないようなら（壁にめり込んでもダメ）ボールを発生させることができる。
+// 移動モードでボールをクリックするとボールと紐付けされてボール位置からマウス位置に向かって矢印が出る、
+// ボールと重ねた状態でリリースするとキャンセル、リリースすると矢印の方向に飛ぶ。
 // 削除モードの時にクリックするとボールがなければ空振り、あればそれを排除する。
+// 設定する速さはMAX30位、矢印の長さはAREA_WIDTHの半分まで伸びる感じで。色は黒系で長いほど濃くなるイメージで。
 
+// MOVE, 面倒なのでボール位置からマウス位置に向かわせる。
 function mousePressed(){
 	const x = mouseX;
 	const y = mouseY;
@@ -332,6 +407,8 @@ function mousePressed(){
 			break;
 		case 1:
 		  /* MOVE */
+			const shootingBallId = mySystem.findBall(x, y);
+			if(shootingBallId >= 0){ mySystem.setShootingBall(shootingBallId); }
 			break;
 		case 2:
 		  /* DELETE */
@@ -340,7 +417,14 @@ function mousePressed(){
   return;
 }
 
+
 function mouseReleased(){
+	switch(mySystem.getModeId()){
+		case 1:
+		  /* MOVE */
+			mySystem.shootBall();
+			break;
+	}
   return;
 }
 
