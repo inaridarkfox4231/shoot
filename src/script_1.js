@@ -113,6 +113,7 @@ class System{
     this.balls = [];
 		this.modeId = 0;
 		//this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
+		this.boardId = 0;
 		this.boardGraphic = createBoardGraphic(); // 背景工夫したいねって
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
@@ -163,6 +164,15 @@ class System{
 		this.massFactorButtons.addColorButton(w * 0.632, h * 0.81, w * 0.164, h * 0.08, 25, "3.5");
 		this.massFactorButtons.addColorButton(w * 0.826, h * 0.81, w * 0.164, h * 0.08, 25, "4.0");
 		this.massFactorButtons.initialize();
+		this.boardButtons = new ButtonSet();
+		let atv = this.boardGraphic.active;
+		let inAtv = this.boardGraphic.inActive;
+		this.boardButtons.addNormalButton(w * 0.03, h * 0.21, w * 0.164, h * 0.08, atv[0], inAtv[0]);
+		this.boardButtons.addNormalButton(w * 0.224, h * 0.21, w * 0.164, h * 0.08, atv[1], inAtv[1]);
+		this.boardButtons.addNormalButton(w * 0.438, h * 0.21, w * 0.164, h * 0.08, atv[2], inAtv[2]);
+		this.boardButtons.addNormalButton(w * 0.632, h * 0.21, w * 0.164, h * 0.08, atv[3], inAtv[3]);
+		this.boardButtons.addNormalButton(w * 0.826, h * 0.21, w * 0.164, h * 0.08, atv[4], inAtv[4]);
+		this.boardButtons.initialize();
 	}
 	activateButton(){
 		// 他の種類のボタンもできるようにボタンをまとめたクラスを用意すべきかもね。
@@ -170,6 +180,8 @@ class System{
 		const y = mouseY;
 		if(x < 0 || x > CONFIG_WIDTH || y < 0 || y > AREA_HEIGHT){ return; }
     // 一旦activeになってるところをinActivateしたうえで、必要なら更新して、それからactivateする。
+		this.boardButtons.activateButton(x, y);
+		this.boardId = this.boardButtons.getActiveButtonId();
 		this.modeButtons.activateButton(x, y);
 		this.modeId = this.modeButtons.getActiveButtonId();
 	  this.colorButtons.activateButton(x, y);
@@ -234,7 +246,7 @@ class System{
   	}
   }
   draw(){
-		image(this.boardGraphic.active[0], 0, 0);
+		image(this.boardGraphic.active[this.boardId], 0, 0);
     for(let b of this.balls){ b.draw(); }
     this.shooter.draw(); // うまくいくか
     this.drawConfig();
@@ -248,6 +260,7 @@ class System{
 		// 全部同じ色でいいよ。茶色かなんかで。で、違うときは暗くする。
 		// これでいいんだけど、今まで通りのこの方法だとマウスクリックとの紐付けが非常に面倒なので、何とかしたいです。
 		// ボタンをクラス化しました～
+		this.boardButtons.draw(gr);
 		this.modeButtons.draw(gr);
 		this.colorButtons.draw(gr);
 		this.massFactorButtons.draw(gr);
@@ -346,6 +359,10 @@ class ButtonSet{
 	addColorButton(left, top, w, h, hue, innerText = ""){
 		// ColorButtonを追加する
 		this.buttons.push(new ColorButton(left, top, w, h, hue, innerText));
+	}
+	addNormalButton(left, top, w, h, activeGraphic, inActiveGraphic){
+		// NormalButtonを追加する
+		this.buttons.push(new NormalButton(left, top, w, h, activeGraphic, inActiveGraphic));
 	}
 	activateButton(x, y){
 		// (x, y)がボタンをactivateさせるなら変更する。
