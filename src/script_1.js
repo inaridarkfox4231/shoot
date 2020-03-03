@@ -41,6 +41,14 @@ const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
 // 0:ADD, 1:MOVE, 2:DELETE.
 
+const prefix = "https://inaridarkfox4231.github.io/assets/shoot/";
+
+let collideSound;
+
+function preload(){
+	collideSound = loadSound(prefix + "collide.mp3");
+}
+
 function setup(){
 	createCanvas(AREA_WIDTH + CONFIG_WIDTH, AREA_HEIGHT);
   colorMode(HSB, 100);
@@ -66,9 +74,6 @@ class Ball{
 		this.velocity = createVector(0, 0);
 		this.radius = BALL_RADIUS;
 		this.friction = FRICTION_COEFFICIENT;
-		//this.hue = BALL_HUE_PALETTE[colorId];
-		//this.massFactor = BALL_MASS_FACTOR_PALETTE[massFactorId];
-    //this.brightNess = floor(100 / this.massFactor); // 重いほど暗い色にする
 		this.massFactor = massFactor;
 		this.graphic = ballGraphic;
 	}
