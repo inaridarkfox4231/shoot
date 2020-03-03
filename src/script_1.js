@@ -113,7 +113,7 @@ class System{
     this.balls = [];
 		this.modeId = 0;
 		//this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
-		this.boardGraphics = createBoardGraphics(); // 背景工夫したいねって
+		this.boardGraphic = createBoardGraphic(); // 背景工夫したいねって
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
 		this.shooter = new BallShooter();
@@ -137,31 +137,31 @@ class System{
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
 		this.modeButtons = new ButtonSet();
-		this.modeButtons.addButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, 15, "ADD");
-		this.modeButtons.addButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, 15, "MOV");
-		this.modeButtons.addButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, 15, "DEL");
+		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, 15, "ADD");
+		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, 15, "MOV");
+		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, 15, "DEL");
 		this.modeButtons.initialize();
 		this.colorButtons = new ButtonSet();
-		this.colorButtons.addButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, 0);
-		this.colorButtons.addButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, 11);
-		this.colorButtons.addButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, 17);
-		this.colorButtons.addButton(w * 0.755, h * 0.505, w * 0.225, h * 0.09, 40);
-		this.colorButtons.addButton(w * 0.02, h * 0.605, w * 0.225, h * 0.09, 52);
-		this.colorButtons.addButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, 64);
-		this.colorButtons.addButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 76);
-		this.colorButtons.addButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 90);
+		this.colorButtons.addColorButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, 0);
+		this.colorButtons.addColorButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, 11);
+		this.colorButtons.addColorButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, 17);
+		this.colorButtons.addColorButton(w * 0.755, h * 0.505, w * 0.225, h * 0.09, 40);
+		this.colorButtons.addColorButton(w * 0.02, h * 0.605, w * 0.225, h * 0.09, 52);
+		this.colorButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, 64);
+		this.colorButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 76);
+		this.colorButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 90);
 		this.colorButtons.initialize();
 		this.massFactorButtons = new ButtonSet();
-		this.massFactorButtons.addButton(w * 0.03, h * 0.71, w * 0.164, h * 0.08, 25, "1.0");
-		this.massFactorButtons.addButton(w * 0.224, h * 0.71, w * 0.164, h * 0.08, 25, "1.2");
-		this.massFactorButtons.addButton(w * 0.438, h * 0.71, w * 0.164, h * 0.08, 25, "1.4");
-		this.massFactorButtons.addButton(w * 0.632, h * 0.71, w * 0.164, h * 0.08, 25, "1.6");
-		this.massFactorButtons.addButton(w * 0.826, h * 0.71, w * 0.164, h * 0.08, 25, "1.8");
-		this.massFactorButtons.addButton(w * 0.03, h * 0.81, w * 0.164, h * 0.08, 25, "2.0");
-		this.massFactorButtons.addButton(w * 0.224, h * 0.81, w * 0.164, h * 0.08, 25, "2.5");
-		this.massFactorButtons.addButton(w * 0.438, h * 0.81, w * 0.164, h * 0.08, 25, "3.0");
-		this.massFactorButtons.addButton(w * 0.632, h * 0.81, w * 0.164, h * 0.08, 25, "3.5");
-		this.massFactorButtons.addButton(w * 0.826, h * 0.81, w * 0.164, h * 0.08, 25, "4.0");
+		this.massFactorButtons.addColorButton(w * 0.03, h * 0.71, w * 0.164, h * 0.08, 25, "1.0");
+		this.massFactorButtons.addColorButton(w * 0.224, h * 0.71, w * 0.164, h * 0.08, 25, "1.2");
+		this.massFactorButtons.addColorButton(w * 0.438, h * 0.71, w * 0.164, h * 0.08, 25, "1.4");
+		this.massFactorButtons.addColorButton(w * 0.632, h * 0.71, w * 0.164, h * 0.08, 25, "1.6");
+		this.massFactorButtons.addColorButton(w * 0.826, h * 0.71, w * 0.164, h * 0.08, 25, "1.8");
+		this.massFactorButtons.addColorButton(w * 0.03, h * 0.81, w * 0.164, h * 0.08, 25, "2.0");
+		this.massFactorButtons.addColorButton(w * 0.224, h * 0.81, w * 0.164, h * 0.08, 25, "2.5");
+		this.massFactorButtons.addColorButton(w * 0.438, h * 0.81, w * 0.164, h * 0.08, 25, "3.0");
+		this.massFactorButtons.addColorButton(w * 0.632, h * 0.81, w * 0.164, h * 0.08, 25, "3.5");
+		this.massFactorButtons.addColorButton(w * 0.826, h * 0.81, w * 0.164, h * 0.08, 25, "4.0");
 		this.massFactorButtons.initialize();
 	}
 	activateButton(){
@@ -234,7 +234,7 @@ class System{
   	}
   }
   draw(){
-		image(this.boardGraphics[0], 0, 0);
+		image(this.boardGraphic.active[0], 0, 0);
     for(let b of this.balls){ b.draw(); }
     this.shooter.draw(); // うまくいくか
     this.drawConfig();
@@ -270,13 +270,11 @@ class System{
 // サイズボタンは1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0の10種類。
 // モードボタンはADD, MOV, DELの3種類。
 class Button{
-	constructor(left, top, w, h, hue, innerText = ""){
+	constructor(left, top, w, h){
 		this.left = left;
 		this.top = top;
 		this.w = w;
 		this.h = h;
-		this.hue = hue;
-		this.innerText = innerText;
 		this.active = false;
 	}
 	activate(){
@@ -288,6 +286,20 @@ class Button{
 	hit(x, y){
 		// クリック位置がボタンに触れてるかどうかをこれで判定する。
 		return this.left < x && x < this.left + this.w && this.top < y && y < this.top + this.h;
+	}
+	draw(gr){
+		// activeなときとactiveでないときで描画の仕方を変えるんだけどその指定の仕方で別クラスにする。
+	}
+}
+
+// Buttonを2種類作る。
+// 今まで通りのパレットのやつはColorButtonで背景選択用のやつはNormalButtonでこれはactiveなときとそうでない時の
+// それぞれの画像を用意して持たせる。だからそこだけ変える。
+class ColorButton extends Button{
+	constructor(left, top, w, h, hue, innerText = ""){
+		super(left, top, w, h);
+		this.hue = hue;
+		this.innerText = innerText;
 	}
 	draw(gr){
 		// activeでないときは色を暗くする。
@@ -304,6 +316,22 @@ class Button{
 	}
 }
 
+// 2つの画像を用意してactiveに応じて切り替える
+class NormalButton extends Button{
+	constructor(left, top, w, h, activeGraphic, inActiveGraphic){
+		super(left, top, w, h);
+		this.activeGraphic = activeGraphic;
+		this.inActiveGraphic = inActiveGraphic;
+	}
+	draw(gr){
+		if(this.active){
+			gr.image(this.activeGraphic, this.left, this.top, this.w, this.h, 0, 0, AREA_WIDTH, AREA_HEIGHT);
+		}else{
+			gr.image(this.inActiveGraphic, this.left, this.top, this.w, this.h, 0, 0, AREA_WIDTH, AREA_HEIGHT);
+		}
+	}
+}
+
 class ButtonSet{
 	constructor(){
 		this.buttons = [];
@@ -315,8 +343,9 @@ class ButtonSet{
 	getActiveButtonId(){
 		return this.activeButtonId;
 	}
-	addButton(left, top, w, h, hue, innerText = ""){
-		this.buttons.push(new Button(left, top, w, h, hue, innerText));
+	addColorButton(left, top, w, h, hue, innerText = ""){
+		// ColorButtonを追加する
+		this.buttons.push(new ColorButton(left, top, w, h, hue, innerText));
 	}
 	activateButton(x, y){
 		// (x, y)がボタンをactivateさせるなら変更する。
@@ -510,21 +539,27 @@ function mouseReleased(){
 // Graphics.
 
 // 背景。
-function createBoardGraphics(){
-	let grArray = [];
+function createBoardGraphic(){
+	let activeGrArray = [];
+	let inActiveGrArray = [];
 	const w = AREA_WIDTH;
 	const h = AREA_HEIGHT;
-	grArray.push(rectLikeBoard(w, h));
-	grArray.push(triLikeBoard(w, h));
-	grArray.push(diaLikeBoard(w, h));
-	grArray.push(starLikeBoard(w, h));
-	grArray.push(ellipseLikeBoard(w, h));
-	return grArray;
+	activeGrArray.push(rectLikeBoard(w, h, 100));
+	activeGrArray.push(triLikeBoard(w, h, 100));
+	activeGrArray.push(diaLikeBoard(w, h, 100));
+	activeGrArray.push(starLikeBoard(w, h, 100));
+	activeGrArray.push(ellipseLikeBoard(w, h, 100));
+	inActiveGrArray.push(rectLikeBoard(w, h, 50));
+	inActiveGrArray.push(triLikeBoard(w, h, 50));
+	inActiveGrArray.push(diaLikeBoard(w, h, 50));
+	inActiveGrArray.push(starLikeBoard(w, h, 50));
+	inActiveGrArray.push(ellipseLikeBoard(w, h, 50));
+	return {active:activeGrArray, inActive:inActiveGrArray};
 }
 
 // 背景いろいろ～
 // 長方形ぐるぐる
-function rectLikeBoard(w, h){
+function rectLikeBoard(w, h, blt){
 	let gr = createGraphics(w, h);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
@@ -532,7 +567,7 @@ function rectLikeBoard(w, h){
 	gr.translate(w / 2, h / 2);
 	for(let i = 0; i < 100; i++){
 		let prg = i / 100;
-		gr.fill(70, 90 * (1 - prg), 100);
+		gr.fill(70, 90 * (1 - prg), blt);
 		gr.rect(0, 0, w * (1 - prg), h * (1 - prg));
 		gr.rotate(2 * PI * random(0.05, 0.15));
 	}
@@ -540,7 +575,7 @@ function rectLikeBoard(w, h){
 }
 
 // 三角形ぐるぐる
-function triLikeBoard(w, h){
+function triLikeBoard(w, h, blt){
 	let gr = createGraphics(w, h);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
@@ -548,7 +583,7 @@ function triLikeBoard(w, h){
 	const maxLength = sqrt(w * w + h * h);
 	for(let i = 0; i < 100; i++){
 		let prg = i / 100;
-		gr.fill(54, 100 * (1 - prg * prg), 100);
+		gr.fill(54, 100 * (1 - prg * prg), blt);
 		const a = maxLength * (1 - prg);
 		gr.triangle(a, 0, a * cos(PI * 2 / 3), a * sin(PI * 2 / 3), a * cos(PI * 4 / 3), a * sin(PI * 4 / 3));
 		gr.rotate(2 * PI * random(0.1, 0.2));
@@ -557,14 +592,14 @@ function triLikeBoard(w, h){
 }
 
 // ダイヤぐるぐる
-function diaLikeBoard(w, h){
+function diaLikeBoard(w, h, blt){
 	let gr = createGraphics(w, h);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
 	gr.translate(w / 2, h / 2);
 	for(let i = 0; i < 100; i++){
 		let prg = i / 100;
-		gr.fill(5, 100 * (1 - prg * prg), 100);
+		gr.fill(5, 100 * (1 - prg * prg), blt);
 		const w1 = w * (1 - prg);
 		const h1 = h * (1 - prg);
 		gr.quad(w1, 0, 0, h1, -w1, 0, 0, -h1);
@@ -574,7 +609,7 @@ function diaLikeBoard(w, h){
 }
 
 // 星型ぐるぐる
-function starLikeBoard(w, h){
+function starLikeBoard(w, h, blt){
 	let gr = createGraphics(w, h);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
@@ -582,7 +617,7 @@ function starLikeBoard(w, h){
 	const maxLength = 0.5 * sqrt(w * w + h * h);
 	for(let i = 0; i < 100; i++){
 		let prg = i / 100;
-		gr.fill(82, 100 * (1 - prg * prg), 100);
+		gr.fill(82, 100 * (1 - prg * prg), blt);
     const a = maxLength * (1 - prg) / sin(PI / 10);
 		const b = maxLength * (1 - prg) / cos(PI / 5);
     let p = [];
@@ -598,14 +633,14 @@ function starLikeBoard(w, h){
 }
 
 // 楕円ぐるぐる
-function ellipseLikeBoard(w, h){
+function ellipseLikeBoard(w, h, blt){
 	let gr = createGraphics(w, h);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
 	gr.translate(w / 2, h / 2);
 	for(let i = 0; i < 100; i++){
 		let prg = i / 100;
-		gr.fill(91, 100 * (1 - prg), 100);
+		gr.fill(91, 100 * (1 - prg), blt);
 		gr.ellipse(0, 0, w * 2 * (1 - prg), h * 2 * (1 - prg));
 		gr.rotate(2 * PI * random(0.25, 0.35));
 	}
