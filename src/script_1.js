@@ -170,6 +170,8 @@ class System{
 	shootBall(){
 		// セットしたボールを離す。
 		this.shooter.shoot();
+		// ボールが動くかどうかにかかわらずリリースする。
+		this.shooter.release();
 	}
 	deleteBall(id){
     // Ballを削除する
@@ -289,7 +291,7 @@ class BallShooter{
 		const speed = arrowLength * SPEED_UPPER_LIMIT / ARROWLENGTH_LIMIT;
 		const direction = atan2(mouseY - this.target.position.y, mouseX - this.target.position.x);
 		this.target.setVelocity(speed, direction);
-		this.release();
+    // releaseはshootのたびに呼び出した方がいいのでここには書かない方がいいと思う。
 	}
 	draw(){
 		if(!this.active){ return; }
@@ -412,6 +414,8 @@ function mousePressed(){
 			break;
 		case 2:
 		  /* DELETE */
+			const deletingBallId = mySystem.findBall(x, y);
+			if(deletingBallId >= 0){ mySystem.deleteBall(deletingBallId); }
 			break;
 	}
   return;
