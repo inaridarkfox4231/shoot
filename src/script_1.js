@@ -46,8 +46,8 @@ const prefix = "https://inaridarkfox4231.github.io/assets/shoot/";
 let collideSound;
 
 function preload(){
-	//collideSound = loadSound(prefix + "collide.mp3");
-	// もうわけわからん
+	collideSound = loadSound(prefix + "collide.mp3");
+	// 0.8.0にしたらうまくいった。なんじゃい。やっぱcdn怖いな・・
 }
 
 function setup(){
@@ -478,7 +478,7 @@ function perfectCollision(_ball, _other){
 	v = reflection(v, newNormalVector);
 	_ball.velocity = p5.Vector.add(u, g);
 	_other.velocity = p5.Vector.add(v, g);
-	//collideSound.play();
+	collideSound.play();
 }
 
 function getCenterVector(_ball, _other){
