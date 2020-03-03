@@ -121,11 +121,18 @@ class System{
 	createButtons(){
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
+		this.modeButtons = new ButtonSet();
+		this.modeButtons.addButton(w * 0.025, h * 0.75, w * 0.3, h * 0.08, 15, "ADD");
+		this.modeButtons.addButton(w * 0.35, h * 0.75, w * 0.3, h * 0.08, 15, "MOV");
+		this.modeButtons.addButton(w * 0.675, h * 0.75, w * 0.3, h * 0.08, 15, "DEL");
+		this.modeButtons.initialize();
+		/*
 		this.buttons = [];
-		this.buttons.push(new ModeButton(w * 0.025, h * 0.75, w * 0.3, h * 0.08, "ADD"));
-		this.buttons.push(new ModeButton(w * 0.35, h * 0.75, w * 0.3, h * 0.08, "MOV"));
-		this.buttons.push(new ModeButton(w * 0.675, h * 0.75, w * 0.3, h * 0.08, "DEL"));
+		this.buttons.push(new Button(w * 0.025, h * 0.75, w * 0.3, h * 0.08, "ADD"));
+		this.buttons.push(new Button(w * 0.35, h * 0.75, w * 0.3, h * 0.08, "MOV"));
+		this.buttons.push(new Button(w * 0.675, h * 0.75, w * 0.3, h * 0.08, "DEL"));
 		this.buttons[this.modeId].activate(); // ADD_MODE.
+		*/
 	}
 	activateButton(){
 		// 他の種類のボタンもできるようにボタンをまとめたクラスを用意すべきかもね。
@@ -133,11 +140,15 @@ class System{
 		const y = mouseY;
 		if(x < 0 || x > CONFIG_WIDTH || y < 0 || y > AREA_HEIGHT){ return; }
     // 一旦activeになってるところをinActivateしたうえで、必要なら更新して、それからactivateする。
+		this.modeButtons.activateButton(x, y);
+		this.modeId = this.modeButtons.getActiveButtonId();
+		/*
 		this.buttons[this.modeId].inActivate();
 		for(let i = 0; i < this.buttons.length; i++){
 			if(this.buttons[i].hit(x, y)){ this.modeId = i; }
 		}
 		this.buttons[this.modeId].activate();
+		*/
 	}
 	addBallCheck(x, y){
 		// 最初に個数の確認
@@ -209,17 +220,20 @@ class System{
 		// 全部同じ色でいいよ。茶色かなんかで。で、違うときは暗くする。
 		// これでいいんだけど、今まで通りのこの方法だとマウスクリックとの紐付けが非常に面倒なので、何とかしたいです。
 		// ボタンをクラス化しました～
-		gr.textSize(h * 0.04);
-		gr.textAlign(CENTER, CENTER);
+		// gr.textSize(h * 0.04);
+		// gr.textAlign(CENTER, CENTER);
+		/*
 		for(let btn of this.buttons){
 			btn.draw(gr);
 		}
+		*/
+		this.modeButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
-// ModeButton.
+// Button.
 // ADD:ボールを追加する。
 // MOV:ボールを動かす。
 // DEL:ボールを削除する。
@@ -232,13 +246,14 @@ class System{
 // 色ボタンはテキストなしで。
 // サイズボタンは1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0の10種類。
 // モードボタンはADD, MOV, DELの3種類。
-class ModeButton{
-	constructor(left, top, w, h, _modeText = ""){
+class Button{
+	constructor(left, top, w, h, hue, innerText = ""){
 		this.left = left;
 		this.top = top;
 		this.w = w;
 		this.h = h;
-		this.modeText = _modeText;
+		this.hue = hue;
+		this.innerText = innerText;
 		this.active = false;
 	}
 	activate(){
@@ -254,13 +269,42 @@ class ModeButton{
 	draw(gr){
 		// activeでないときは色を暗くする。
 		if(this.active){
-			gr.fill(10, 100, 100);
+			gr.fill(this.hue, 100, 100);
 		}else{
-			gr.fill(10, 100, 50);
+			gr.fill(this.hue, 100, 50);
 		}
 		gr.rect(this.left, this.top, this.w, this.h);
 		gr.fill(0);
-		gr.text(this.modeText, this.left + (this.w / 2), this.top + (this.h / 2));
+		gr.textSize(this.h / 2);
+		gr.textAlign(CENTER, CENTER);
+		gr.text(this.innerText, this.left + (this.w / 2), this.top + (this.h / 2));
+	}
+}
+
+class ButtonSet{
+	constructor(){
+		this.buttons = [];
+		this.activeButtonId = 0;
+	}
+	initialize(){
+		this.buttons[0].activate();
+	}
+	getActiveButtonId(){
+		return this.activeButtonId;
+	}
+	addButton(left, top, w, h, hue, innerText = ""){
+		this.buttons.push(new Button(left, top, w, h, hue, innerText));
+	}
+	activateButton(x, y){
+		// (x, y)がボタンをactivateさせるなら変更する。
+		this.buttons[this.activeButtonId].inActivate();
+		for(let i = 0; i < this.buttons.length; i++){
+			if(this.buttons[i].hit(x, y)){ this.activeButtonId = i; }
+		}
+		this.buttons[this.activeButtonId].activate();
+	}
+	draw(gr){
+		for(let btn of this.buttons){ btn.draw(gr); }
 	}
 }
 
