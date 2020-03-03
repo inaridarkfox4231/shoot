@@ -47,6 +47,7 @@ let collideSound;
 
 function preload(){
 	collideSound = loadSound(prefix + "collide.mp3");
+	// もうわけわからん
 }
 
 function setup(){
