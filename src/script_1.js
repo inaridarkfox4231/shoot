@@ -59,6 +59,7 @@ function draw(){
 // -------------------------------------------------------------------------------------------------------------------- //
 // Ball.
 
+// こっちをmassFactorとballGraphicにしてそれぞれ登録する。drawはballGraphicを当てはめる形。
 class Ball{
 	constructor(x, y, colorId = 0, massFactorId = 0){
 		this.position = createVector(x, y);
@@ -114,6 +115,16 @@ class System{
 		this.shooter = new BallShooter();
 		this.colorId = 0;
 		this.massFactorId = 0;
+		this.ballGraphicArray = []; // ボール画像
+		for(let i = 0; i < BALL_HUE_PALETTE.length; i++){
+			let grArray = [];
+			const hue = BALL_HUE_PALETTE[i];
+			for(let k = 0; k < BALL_MASS_FACTOR_PALETTE.length; k++){
+				const massFactor = BALL_MASS_FACTOR_PALETTE[k];
+				grArray.push(createBallGraphic(hue, 100, 100 - (massFactor - 1.0) * 25));
+			}
+			this.ballGraphicArray.push(grArray);
+		}
   }
 	getModeId(){
 		return this.modeId;
@@ -493,6 +504,7 @@ function mouseReleased(){
 // -------------------------------------------------------------------------------------------------------------------- //
 // Graphics.
 
+// 背景。
 function createBoardGraphic(){
 	let gr = createGraphics(AREA_WIDTH, AREA_HEIGHT);
 	gr.colorMode(HSB, 100);
@@ -502,11 +514,26 @@ function createBoardGraphic(){
 	return gr;
 }
 
+// ConfigBoard. もろもろは毎度更新するのでベースだけ。
 function createConfigGraphic(){
 	let gr = createGraphics(CONFIG_WIDTH, AREA_HEIGHT);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
 	return gr;
+}
+
+// maxSaturationから0に近づけていくグラデーション。
+function createBallGraphic(hue, maxSaturation, blightNess){
+	let gr = createGraphics(BALL_RADIUS * 2, BALL_RADIUS * 2);
+	gr.colorMode(HSB, 100);
+	gr.noStroke();
+	gr.translate(BALL_RADIUS, BALL_RADIUS);
+	for(let i = 0; i < 100; i++){
+		let prg = i / 100;
+		prg = 1 - sqrt(1 - prg * prg);
+		gr.fill(hue, maxSaturation * (1 - prg), blightNess);
+		gr.circle(0, 0, 2 * BALL_RADIUS * (1 - prg));
+	}
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
