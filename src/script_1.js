@@ -47,7 +47,7 @@ function setup(){
 	noStroke();
   mySystem = new System();
 
-  ptn0();
+  //ptn0();
 }
 
 function draw(){
@@ -61,14 +61,16 @@ function draw(){
 
 // こっちをmassFactorとballGraphicにしてそれぞれ登録する。drawはballGraphicを当てはめる形。
 class Ball{
-	constructor(x, y, colorId = 0, massFactorId = 0){
+	constructor(x, y, massFactor, ballGraphic){
 		this.position = createVector(x, y);
 		this.velocity = createVector(0, 0);
 		this.radius = BALL_RADIUS;
 		this.friction = FRICTION_COEFFICIENT;
-		this.hue = BALL_HUE_PALETTE[colorId];
-		this.massFactor = BALL_MASS_FACTOR_PALETTE[massFactorId];
-    this.brightNess = floor(100 / this.massFactor); // 重いほど暗い色にする
+		//this.hue = BALL_HUE_PALETTE[colorId];
+		//this.massFactor = BALL_MASS_FACTOR_PALETTE[massFactorId];
+    //this.brightNess = floor(100 / this.massFactor); // 重いほど暗い色にする
+		this.massFactor = massFactor;
+		this.graphic = ballGraphic;
 	}
 	setVelocity(speed, direction){
 		this.velocity.set(speed * cos(direction), speed * sin(direction));
@@ -97,8 +99,9 @@ class Ball{
 		if(this.velocity.mag() < SPEED_LOWER_LIMIT){ this.velocity.set(0, 0); } // 速さの下限に達したら0にする。
 	}
 	draw(){
-		fill(this.hue, 100, this.brightNess);
-		circle(this.position.x, this.position.y, this.radius * 2);
+		//fill(this.hue, 100, this.brightNess);
+		//circle(this.position.x, this.position.y, this.radius * 2);
+		image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
 	}
 }
 
@@ -189,7 +192,8 @@ class System{
 	}
   addBall(x, y){
     // Ballを追加する
-    this.balls.push(new Ball(x, y, this.colorId, this.massFactorId));
+    //this.balls.push(new Ball(x, y, this.colorId, this.massFactorId));
+		this.balls.push(new Ball(x, y, BALL_MASS_FACTOR_PALETTE[this.massFactorId], this.ballGraphicArray[this.colorId][this.massFactorId]));
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
@@ -523,17 +527,22 @@ function createConfigGraphic(){
 }
 
 // maxSaturationから0に近づけていくグラデーション。
+// あえて若干大きめに取ってあります。
+// なんか、こうしないと色々まずいみたいなので。描画の際にも1.2倍にしてる・・原因は不明。
+// まあ若干無茶なグラデーションしてるからそこら辺でしょ。
 function createBallGraphic(hue, maxSaturation, blightNess){
-	let gr = createGraphics(BALL_RADIUS * 2, BALL_RADIUS * 2);
+	let gr = createGraphics(BALL_RADIUS * 2.4, BALL_RADIUS * 2.4);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
-	gr.translate(BALL_RADIUS, BALL_RADIUS);
+	gr.translate(BALL_RADIUS * 1.2, BALL_RADIUS * 1.2);
+
 	for(let i = 0; i < 100; i++){
 		let prg = i / 100;
 		prg = 1 - sqrt(1 - prg * prg);
 		gr.fill(hue, maxSaturation * (1 - prg), blightNess);
 		gr.circle(0, 0, 2 * BALL_RADIUS * (1 - prg));
 	}
+	return gr;
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
