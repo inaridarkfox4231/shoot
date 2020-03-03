@@ -34,7 +34,7 @@ const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以�
 const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.08; // セットするスピードの上限。横幅の8%でいく。
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
-const BALL_HUE_PALETTE = [66, 77, 88, 0, 11, 22, 33, 44, 55]; // 9種類
+const BALL_HUE_PALETTE = [0, 11, 17, 40, 52, 64, 76, 90]; // 10種類
 const BALL_MASS_FACTOR_PALETTE = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0]; // 10種類
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
@@ -112,8 +112,8 @@ class System{
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
 		this.shooter = new BallShooter();
-		this.ballColorId = 0;
-		this.ballMassFactorId = 0;
+		this.colorId = 0;
+		this.massFactorId = 0;
   }
 	getModeId(){
 		return this.modeId;
@@ -122,17 +122,20 @@ class System{
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
 		this.modeButtons = new ButtonSet();
-		this.modeButtons.addButton(w * 0.025, h * 0.75, w * 0.3, h * 0.08, 15, "ADD");
-		this.modeButtons.addButton(w * 0.35, h * 0.75, w * 0.3, h * 0.08, 15, "MOV");
-		this.modeButtons.addButton(w * 0.675, h * 0.75, w * 0.3, h * 0.08, 15, "DEL");
+		this.modeButtons.addButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, 15, "ADD");
+		this.modeButtons.addButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, 15, "MOV");
+		this.modeButtons.addButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, 15, "DEL");
 		this.modeButtons.initialize();
-		/*
-		this.buttons = [];
-		this.buttons.push(new Button(w * 0.025, h * 0.75, w * 0.3, h * 0.08, "ADD"));
-		this.buttons.push(new Button(w * 0.35, h * 0.75, w * 0.3, h * 0.08, "MOV"));
-		this.buttons.push(new Button(w * 0.675, h * 0.75, w * 0.3, h * 0.08, "DEL"));
-		this.buttons[this.modeId].activate(); // ADD_MODE.
-		*/
+		this.colorButtons = new ButtonSet();
+		this.colorButtons.addButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, 0);
+		this.colorButtons.addButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, 11);
+		this.colorButtons.addButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, 17);
+		this.colorButtons.addButton(w * 0.755, h * 0.505, w * 0.225, h * 0.09, 40);
+		this.colorButtons.addButton(w * 0.02, h * 0.605, w * 0.225, h * 0.09, 52);
+		this.colorButtons.addButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, 64);
+		this.colorButtons.addButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 76);
+		this.colorButtons.addButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 90);
+		this.colorButtons.initialize();
 	}
 	activateButton(){
 		// 他の種類のボタンもできるようにボタンをまとめたクラスを用意すべきかもね。
@@ -142,13 +145,8 @@ class System{
     // 一旦activeになってるところをinActivateしたうえで、必要なら更新して、それからactivateする。
 		this.modeButtons.activateButton(x, y);
 		this.modeId = this.modeButtons.getActiveButtonId();
-		/*
-		this.buttons[this.modeId].inActivate();
-		for(let i = 0; i < this.buttons.length; i++){
-			if(this.buttons[i].hit(x, y)){ this.modeId = i; }
-		}
-		this.buttons[this.modeId].activate();
-		*/
+	  this.colorButtons.activateButton(x, y);
+		this.colorId = this.colorButtons.getActiveButtonId();
 	}
 	addBallCheck(x, y){
 		// 最初に個数の確認
@@ -166,7 +164,7 @@ class System{
 	}
   addBall(x, y){
     // Ballを追加する
-    this.balls.push(new Ball(x, y, this.ballColorId, this.ballMassFactorId));
+    this.balls.push(new Ball(x, y, this.colorId, this.massFactorId));
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
@@ -220,14 +218,8 @@ class System{
 		// 全部同じ色でいいよ。茶色かなんかで。で、違うときは暗くする。
 		// これでいいんだけど、今まで通りのこの方法だとマウスクリックとの紐付けが非常に面倒なので、何とかしたいです。
 		// ボタンをクラス化しました～
-		// gr.textSize(h * 0.04);
-		// gr.textAlign(CENTER, CENTER);
-		/*
-		for(let btn of this.buttons){
-			btn.draw(gr);
-		}
-		*/
 		this.modeButtons.draw(gr);
+		this.colorButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
 }
