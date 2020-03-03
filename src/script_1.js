@@ -477,6 +477,7 @@ function perfectCollision(_ball, _other){
 	v = reflection(v, newNormalVector);
 	_ball.velocity = p5.Vector.add(u, g);
 	_other.velocity = p5.Vector.add(v, g);
+	collideSound.play();
 }
 
 function getCenterVector(_ball, _other){
