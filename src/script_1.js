@@ -136,6 +136,18 @@ class System{
 		this.colorButtons.addButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 76);
 		this.colorButtons.addButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 90);
 		this.colorButtons.initialize();
+		this.massFactorButtons = new ButtonSet();
+		this.massFactorButtons.addButton(w * 0.03, h * 0.71, w * 0.164, h * 0.08, 25, "1.0");
+		this.massFactorButtons.addButton(w * 0.224, h * 0.71, w * 0.164, h * 0.08, 25, "1.2");
+		this.massFactorButtons.addButton(w * 0.438, h * 0.71, w * 0.164, h * 0.08, 25, "1.4");
+		this.massFactorButtons.addButton(w * 0.632, h * 0.71, w * 0.164, h * 0.08, 25, "1.6");
+		this.massFactorButtons.addButton(w * 0.826, h * 0.71, w * 0.164, h * 0.08, 25, "1.8");
+		this.massFactorButtons.addButton(w * 0.03, h * 0.81, w * 0.164, h * 0.08, 25, "2.0");
+		this.massFactorButtons.addButton(w * 0.224, h * 0.81, w * 0.164, h * 0.08, 25, "2.5");
+		this.massFactorButtons.addButton(w * 0.438, h * 0.81, w * 0.164, h * 0.08, 25, "3.0");
+		this.massFactorButtons.addButton(w * 0.632, h * 0.81, w * 0.164, h * 0.08, 25, "3.5");
+		this.massFactorButtons.addButton(w * 0.826, h * 0.81, w * 0.164, h * 0.08, 25, "4.0");
+		this.massFactorButtons.initialize();
 	}
 	activateButton(){
 		// 他の種類のボタンもできるようにボタンをまとめたクラスを用意すべきかもね。
@@ -147,6 +159,8 @@ class System{
 		this.modeId = this.modeButtons.getActiveButtonId();
 	  this.colorButtons.activateButton(x, y);
 		this.colorId = this.colorButtons.getActiveButtonId();
+		this.massFactorButtons.activateButton(x, y);
+		this.massFactorId = this.massFactorButtons.getActiveButtonId();
 	}
 	addBallCheck(x, y){
 		// 最初に個数の確認
@@ -220,6 +234,7 @@ class System{
 		// ボタンをクラス化しました～
 		this.modeButtons.draw(gr);
 		this.colorButtons.draw(gr);
+		this.massFactorButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
 }
@@ -501,7 +516,7 @@ function createConfigGraphic(){
 
 function ptn0(){
   let b_self = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.2, 0);
-  let b_top = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.7, 8);
+  let b_top = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.7, 7);
   let b1 = new Ball(AREA_WIDTH * 0.45, AREA_WIDTH * 0.8, 1);
   let b2 = new Ball(AREA_WIDTH * 0.55, AREA_WIDTH * 0.8, 1);
   let b3 = new Ball(AREA_WIDTH * 0.4, AREA_WIDTH * 0.9, 2);
