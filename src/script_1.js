@@ -29,12 +29,13 @@ const AREA_HEIGHT = AREA_WIDTH * 1.5;
 const BALL_RADIUS = AREA_WIDTH * 0.045; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
 const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.005; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
 const FRICTION_COEFFICIENT = 0.01; // 摩擦の大きさ
-const SPEED_LOWER_LIMIT = 0.1; // 速さの下限（これ以下になったら0として扱う）
+const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）
 
-const SPEED_UPPER_LIMIT = 30.0; // セットするスピードの上限
+const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.08; // セットするスピードの上限。横幅の8%でいく。
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
-const BALL_HUE_PALLETE = [66, 77, 88, 0, 11, 22, 33, 44, 55]; // 9種類
+const BALL_HUE_PALETTE = [66, 77, 88, 0, 11, 22, 33, 44, 55]; // 9種類
+const BALL_MASS_FACTOR_PALETTE = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0]; // 10種類
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
@@ -59,14 +60,14 @@ function draw(){
 // Ball.
 
 class Ball{
-	constructor(x, y, colorId = 0, mf = 1.0){
+	constructor(x, y, colorId = 0, massFactorId = 0){
 		this.position = createVector(x, y);
 		this.velocity = createVector(0, 0);
-		this.massFactor = mf;
 		this.radius = BALL_RADIUS;
 		this.friction = FRICTION_COEFFICIENT;
-		this.hue = BALL_HUE_PALLETE[colorId];
-    this.brightNess = floor(100 / mf); // 重いほど暗い色にする
+		this.hue = BALL_HUE_PALETTE[colorId];
+		this.massFactor = BALL_MASS_FACTOR_PALETTE[massFactorId];
+    this.brightNess = floor(100 / this.massFactor); // 重いほど暗い色にする
 	}
 	setVelocity(speed, direction){
 		this.velocity.set(speed * cos(direction), speed * sin(direction));
@@ -112,7 +113,7 @@ class System{
 	  this.createButtons();
 		this.shooter = new BallShooter();
 		this.ballColorId = 0;
-		this.ballMassFactor = 1.0;
+		this.ballMassFactorId = 0;
   }
 	getModeId(){
 		return this.modeId;
@@ -127,6 +128,7 @@ class System{
 		this.buttons[this.modeId].activate(); // ADD_MODE.
 	}
 	activateButton(){
+		// 他の種類のボタンもできるようにボタンをまとめたクラスを用意すべきかもね。
     const x = mouseX - AREA_WIDTH;
 		const y = mouseY;
 		if(x < 0 || x > CONFIG_WIDTH || y < 0 || y > AREA_HEIGHT){ return; }
@@ -153,7 +155,7 @@ class System{
 	}
   addBall(x, y){
     // Ballを追加する
-    this.balls.push(new Ball(x, y, this.ballColorId, this.ballMassFactor));
+    this.balls.push(new Ball(x, y, this.ballColorId, this.ballMassFactorId));
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
@@ -227,8 +229,11 @@ class System{
 // アニメーション中に他をクリックしちゃったらとかあるのでモードチェンジの際にアニメを切れるようにする。
 // まあもろもろ揃えてからでいいよ。
 
+// 色ボタンはテキストなしで。
+// サイズボタンは1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0の10種類。
+// モードボタンはADD, MOV, DELの3種類。
 class ModeButton{
-	constructor(left, top, w, h, _modeText){
+	constructor(left, top, w, h, _modeText = ""){
 		this.left = left;
 		this.top = top;
 		this.w = w;
