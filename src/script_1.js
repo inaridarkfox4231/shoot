@@ -34,7 +34,7 @@ const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以�
 const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
-const BALL_HUE_PALETTE = [0, 11, 17, 40, 52, 64, 76, 90]; // 10種類
+const BALL_HUE_PALETTE = [0, 11, 17, 40, 52, 64, 76, 90]; // 8種類
 // MASS_FACTOR_PALETTEは廃止。代わりに1.5と2.0を画像付きで別に用意する。
 //const BALL_MASS_FACTOR_PALETTE = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0]; // 10種類
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
@@ -76,7 +76,6 @@ class Ball{
 		this.velocity = createVector(0, 0);
 		this.radius = BALL_RADIUS;
 		this.friction = FRICTION_COEFFICIENT;
-		//this.massFactor = massFactor;
 		this.massFactor = 1.0; // デフォルト1.0で統一。特別なクラスの場合に上書きする。
 		this.graphic = ballGraphic;
 	}
@@ -107,8 +106,6 @@ class Ball{
 		if(this.velocity.mag() < SPEED_LOWER_LIMIT){ this.velocity.set(0, 0); } // 速さの下限に達したら0にする。
 	}
 	draw(){
-		//fill(this.hue, 100, this.brightNess);
-		//circle(this.position.x, this.position.y, this.radius * 2);
 		image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
 	}
 }
@@ -121,8 +118,10 @@ class Ball{
 // 発光したボールとあたると中央の結晶の色がその色になって（基本薄い水色っぽいの）、同じ色のColorBallと当たるとそれも発光する。
 // そのまま消滅。
 // 3.ThunderBall. type:"thunder". これは発光中のColorBallが衝突したら消滅してその瞬間に同じ色のColorBallがすべて消滅する。
-// 4.HeavyBall. type:"heavy". massFactorが1.5で摩擦係数もちょっと大きくする。
-// 5.GreatHeavyBall. type:"greatheavy". massFactorが2.0で摩擦係数をさらに大きくする。
+// 4.HeavyBall. type:"heavy". massFactorが2.0で摩擦係数も3倍の0.03にする。
+// 5.WhiteBall. type:"white". 手玉とwhite以外のボールが当たった場合に消滅してそのボールと同じ種類のボールを同じ場所に出現させる。
+
+// 3, 4, 5は発光しないので、継承で書いた方がいいね・・
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // System.
@@ -131,30 +130,19 @@ class System{
   constructor(){
     this.balls = [];
 		this.modeId = 0;
-		//this.boardGraphic = createBoardGraphic();   // ボールエリアのグラフィック
 		this.boardId = 0;
 		this.boardGraphic = createBoardGraphic(); // 背景工夫したいねって
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
 		this.shooter = new BallShooter();
 		this.colorId = 0;
-		//this.massFactorId = 0;
 		this.ballGraphicArray = []; // ボール画像
 		for(let i = 0; i < BALL_HUE_PALETTE.length; i++){
 			const hue = BALL_HUE_PALETTE[i];
 			this.ballGraphicArray.push(createBallGraphic(hue, 100));
 		}
-		/*
-		for(let i = 0; i < BALL_HUE_PALETTE.length; i++){
-			let grArray = [];
-			const hue = BALL_HUE_PALETTE[i];
-			for(let k = 0; k < BALL_MASS_FACTOR_PALETTE.length; k++){
-				const massFactor = BALL_MASS_FACTOR_PALETTE[k];
-				grArray.push(createBallGraphic(hue, 100, 100 - (massFactor - 1.0) * 25));
-			}
-			this.ballGraphicArray.push(grArray);
-		}
-		*/
+		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
+		// で、0～7をColorBall生成時の色のidとして採用すればいい。
   }
 	getModeId(){
 		return this.modeId;
@@ -162,11 +150,17 @@ class System{
 	createButtons(){
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
-		this.modeButtons = new ButtonSet();
-		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, 15, "ADD");
-		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, 15, "MOV");
-		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, 15, "DEL");
-		this.modeButtons.initialize();
+    // 背景選択用ボタン
+		this.boardButtons = new ButtonSet();
+		let atv = this.boardGraphic.active;
+		let inAtv = this.boardGraphic.inActive;
+		this.boardButtons.addNormalButton(w * 0.03, h * 0.21, w * 0.164, h * 0.08, atv[0], inAtv[0]);
+		this.boardButtons.addNormalButton(w * 0.224, h * 0.21, w * 0.164, h * 0.08, atv[1], inAtv[1]);
+		this.boardButtons.addNormalButton(w * 0.438, h * 0.21, w * 0.164, h * 0.08, atv[2], inAtv[2]);
+		this.boardButtons.addNormalButton(w * 0.632, h * 0.21, w * 0.164, h * 0.08, atv[3], inAtv[3]);
+		this.boardButtons.addNormalButton(w * 0.826, h * 0.21, w * 0.164, h * 0.08, atv[4], inAtv[4]);
+		this.boardButtons.initialize();
+    // ボールの種類を選択する為のボタン
 		this.colorButtons = new ButtonSet();
 		this.colorButtons.addColorButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, 0);
 		this.colorButtons.addColorButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, 11);
@@ -177,29 +171,12 @@ class System{
 		this.colorButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 76);
 		this.colorButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 90);
 		this.colorButtons.initialize();
-		/*
-		this.massFactorButtons = new ButtonSet();
-		this.massFactorButtons.addColorButton(w * 0.03, h * 0.71, w * 0.164, h * 0.08, 25, "1.0");
-		this.massFactorButtons.addColorButton(w * 0.224, h * 0.71, w * 0.164, h * 0.08, 25, "1.2");
-		this.massFactorButtons.addColorButton(w * 0.438, h * 0.71, w * 0.164, h * 0.08, 25, "1.4");
-		this.massFactorButtons.addColorButton(w * 0.632, h * 0.71, w * 0.164, h * 0.08, 25, "1.6");
-		this.massFactorButtons.addColorButton(w * 0.826, h * 0.71, w * 0.164, h * 0.08, 25, "1.8");
-		this.massFactorButtons.addColorButton(w * 0.03, h * 0.81, w * 0.164, h * 0.08, 25, "2.0");
-		this.massFactorButtons.addColorButton(w * 0.224, h * 0.81, w * 0.164, h * 0.08, 25, "2.5");
-		this.massFactorButtons.addColorButton(w * 0.438, h * 0.81, w * 0.164, h * 0.08, 25, "3.0");
-		this.massFactorButtons.addColorButton(w * 0.632, h * 0.81, w * 0.164, h * 0.08, 25, "3.5");
-		this.massFactorButtons.addColorButton(w * 0.826, h * 0.81, w * 0.164, h * 0.08, 25, "4.0");
-		this.massFactorButtons.initialize();
-		*/
-		this.boardButtons = new ButtonSet();
-		let atv = this.boardGraphic.active;
-		let inAtv = this.boardGraphic.inActive;
-		this.boardButtons.addNormalButton(w * 0.03, h * 0.21, w * 0.164, h * 0.08, atv[0], inAtv[0]);
-		this.boardButtons.addNormalButton(w * 0.224, h * 0.21, w * 0.164, h * 0.08, atv[1], inAtv[1]);
-		this.boardButtons.addNormalButton(w * 0.438, h * 0.21, w * 0.164, h * 0.08, atv[2], inAtv[2]);
-		this.boardButtons.addNormalButton(w * 0.632, h * 0.21, w * 0.164, h * 0.08, atv[3], inAtv[3]);
-		this.boardButtons.addNormalButton(w * 0.826, h * 0.21, w * 0.164, h * 0.08, atv[4], inAtv[4]);
-		this.boardButtons.initialize();
+    // モードを変更する為のボタン
+		this.modeButtons = new ButtonSet();
+		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, 15, "ADD");
+		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, 15, "MOV");
+		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, 15, "DEL");
+		this.modeButtons.initialize();
 	}
 	activateButton(){
 		// 他の種類のボタンもできるようにボタンをまとめたクラスを用意すべきかもね。
@@ -213,8 +190,6 @@ class System{
 		this.modeId = this.modeButtons.getActiveButtonId();
 	  this.colorButtons.activateButton(x, y);
 		this.colorId = this.colorButtons.getActiveButtonId();
-		//this.massFactorButtons.activateButton(x, y);
-		//this.massFactorId = this.massFactorButtons.getActiveButtonId();
 	}
 	addBallCheck(x, y){
 		// 最初に個数の確認
@@ -232,8 +207,7 @@ class System{
 	}
   addBall(x, y){
     // Ballを追加する
-    //this.balls.push(new Ball(x, y, this.colorId, this.massFactorId));
-		//this.balls.push(new Ball(x, y, BALL_MASS_FACTOR_PALETTE[this.massFactorId], this.ballGraphicArray[this.colorId][this.massFactorId]));
+		// kind < 8の場合はColorBallだけどそれ以降はスイッチしたほうがいいかも？Colorならpale画像も必要だし。
 		this.balls.push(new Ball(x, y, this.ballGraphicArray[this.colorId]));
   }
   findBall(x, y){
@@ -247,8 +221,6 @@ class System{
 	setShootingBall(id){
 		// id番のボールをセットする。
 		this.shooter.setTarget(this.balls[id]);
-		//console.log(this.balls[id]);
-		//console.log(this.shooter.target);
 	}
 	shootBall(){
 		// セットしたボールを離す。
@@ -291,7 +263,6 @@ class System{
 		this.boardButtons.draw(gr);
 		this.modeButtons.draw(gr);
 		this.colorButtons.draw(gr);
-		//this.massFactorButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
 }
@@ -568,7 +539,7 @@ function mousePressed(){
 			if(deletingBallId >= 0){ mySystem.deleteBall(deletingBallId); }
 			break;
 	}
-  return;
+  return false;
 }
 
 
@@ -579,7 +550,7 @@ function mouseReleased(){
 			mySystem.shootBall();
 			break;
 	}
-  return;
+  return false;
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
@@ -720,6 +691,13 @@ function createBallGraphic(hue, maxSaturation){
 	}
 	return gr;
 }
+
+// ボタンを作る。やっぱColorButtonは廃止かな・・全部NormalButtonにする流れで。テキストとかも必要なら用意する感じで。
+// とりあえず色とテキストだけのボタンをモード変更用とカラーボール選択用に作る。
+// アイスボールとかそっちは個別に関数を作る。ColorButtonは一応残しておくけど実質廃止みたいな感じかな・・
+// hueはやめてパレットには16進数コードを載せておく。これ使ってボールの画像とか作る。ボール画像はwhiteとの距離を縮めることで
+// 発光時のグラフィックを作れるようにしよう。
+// ボードの方は色暗くしたけど、こっちは逆にinActiveなときは色を薄くしたい。ボールと揃えたいね。以上。
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Pattern.
