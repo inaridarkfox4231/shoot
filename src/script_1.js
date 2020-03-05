@@ -31,7 +31,7 @@ const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.005; // ボールの直径が0.1の中
 const FRICTION_COEFFICIENT = 0.01; // 摩擦の大きさ
 const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）
 
-const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.08; // セットするスピードの上限。横幅の8%でいく。
+const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
 const BALL_HUE_PALETTE = [0, 11, 17, 40, 52, 64, 76, 90]; // 10種類
@@ -69,11 +69,8 @@ function draw(){
 // Ball.
 
 // こっちをmassFactorとballGraphicにしてそれぞれ登録する。drawはballGraphicを当てはめる形。
-// 同じ色かどうか判定したいからやっぱcolorId要るわな。
-// って思ったけど、今一時的にグラフィック指定になってるんだよな・・ということは色は別にどうでもいいわけだ。
-// だったら継承で色情報持ってるやつを作って、そうでないものも作れるようにした方が今後を考えるといいかもね。
 class Ball{
-	constructor(x, y, colorId, massFactor, ballGraphic){
+	constructor(x, y, massFactor, ballGraphic){
 		this.position = createVector(x, y);
 		this.velocity = createVector(0, 0);
 		this.radius = BALL_RADIUS;
@@ -113,22 +110,6 @@ class Ball{
 		image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
 	}
 }
-
-// 同じ色のボールと衝突したらフラグが立って120フレーム後に消滅するがそのフレーム数というかlifeね、
-// lifeが減っていくんだけどそれと衝突した同じ色のボールにもその時点での残フレームが与えられて最終的に同時に消滅する
-// みたいなのを書きたいね。
-class ColorBall extends Ball{
-	constructor(x, y, massFactor, ballGraphic, colorId){
-		super(x, y, massFactor, ballGraphic);
-    this.type = "colored";
-		this.colorId = colorId;
-	}
-}
-
-// まず、重さを廃止してファクターが1.5と2.0のやつだけ画像付きで用意する。
-// で、それとは別にアイスボールっぽいのとサンダーボールっぽいのを実装して
-// カラーと分ける。それでおわり・・
-// 最初にボール消えるときのパーティクル実装する（DELモードでクリックするとそういうふうに消える）。もうすぐおわり。おわり・・
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // System.
@@ -425,7 +406,8 @@ class BallShooter{
 	}
 	getArrowLength(){
 		// 矢印の長さを計算する。ターゲットの中心からマウスまでの距離ーBALL_RADIUSで上限は横幅の6割。
-		return min(dist(this.target.position.x, this.target.position.y, mouseX, mouseY), ARROWLENGTH_LIMIT) - BALL_RADIUS;
+		// BALL_RADIUSを足さないと矢印の長さがきちんとあれにならない。
+		return min(dist(this.target.position.x, this.target.position.y, mouseX, mouseY), ARROWLENGTH_LIMIT + BALL_RADIUS) - BALL_RADIUS;
 	}
 	shoot(){
 		// activeでないときは何もしない。
@@ -448,11 +430,11 @@ class BallShooter{
 		let end = createVector((BALL_RADIUS + arrowLength) * cos(direction), (BALL_RADIUS + arrowLength) * sin(direction));
 		start.add(this.target.position);
 		end.add(this.target.position);
-		stroke(0);
-		strokeWeight(2.0);
+		stroke(55 + 45 * (arrowLength / ARROWLENGTH_LIMIT), 100, 100);
+		strokeWeight(6.0);
 		line(start.x, start.y, end.x, end.y);
-    let upperArrow = createVector((arrowLength * 0.1) * cos(direction + PI * 0.85), (arrowLength * 0.1) * sin(direction + PI * 0.85));
-		let lowerArrow = createVector((arrowLength * 0.1) * cos(direction - PI * 0.85), (arrowLength * 0.1) * sin(direction - PI * 0.85));
+    let upperArrow = createVector((arrowLength * 0.3) * cos(direction + PI * 0.85), (arrowLength * 0.3) * sin(direction + PI * 0.85));
+		let lowerArrow = createVector((arrowLength * 0.3) * cos(direction - PI * 0.85), (arrowLength * 0.3) * sin(direction - PI * 0.85));
 		upperArrow.add(end);
 		lowerArrow.add(end);
 		line(end.x, end.y, upperArrow.x, upperArrow.y);
