@@ -34,9 +34,13 @@ const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以�
 const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
-const BALL_HUE_PALETTE = [0, 11, 17, 40, 52, 64, 76, 90]; // 8種類
+//const BALL_HUE_PALETTE = [0, 11, 17, 40, 52, 64, 76, 90]; // 8種類
 // MASS_FACTOR_PALETTEは廃止。代わりに1.5と2.0を画像付きで別に用意する。
 //const BALL_MASS_FACTOR_PALETTE = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0]; // 10種類
+
+// ColorBallの色はパレットから出すことにしました。
+// 順に赤、オレンジ、黄色、緑、水色、青、紫、ピンク。その次は"#32cd32"（黄緑）でモード選択用。
+const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32"];
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
@@ -56,7 +60,6 @@ function setup(){
   colorMode(HSB, 100);
 	noStroke();
   mySystem = new System();
-
   //ptn0();
 }
 
@@ -110,6 +113,28 @@ class Ball{
 	}
 }
 
+class ColorBall extends Ball{
+	constructor(x, y, ballGraphic, paleGraphic, colorId){
+		super(x, y, ballGraphic, paleBallGraphic, colorId);
+		this.paleGraphic = paleGraphic;
+		this.colorId = colorId;
+		this.pale = false;
+		this.life = 120; // paleがtrueのとき減り続けて0になると消滅する
+	}
+	update(){
+		super.update();
+		if(this.pale){ this.life--; }
+		// lifeが0のBallの排除はSystem側で行う。その際パーティクルを出したり、種類に応じてまあいろいろやる。
+	}
+	draw(){
+		if(this.pale){
+			image(this.paleGraphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
+		}else{
+			image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
+		}
+	}
+}
+
 // グラフィックはボールによってはいじるかもだけどそこらへんは個別に対応できるし上書きできるからOK.
 
 // 1.ColorBall. これは色のid情報をもつ。type:"color"で、同じ色と当たると発光したのち消滅する。
@@ -135,12 +160,23 @@ class System{
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
 		this.shooter = new BallShooter();
-		this.colorId = 0;
-		this.ballGraphicArray = []; // ボール画像
+		//this.colorId = 0;
+		this.ballKindId = 0;
+		this.ballGraphicArray = {}; // ボール画像. normalとpaleの2種類。
+		this.ballGraphicArray.normal = [];
+		this.ballGraphicArray.pale = [];
+		// とりあえず現時点ではnormal8つとpale8つかな。iceBallにもpaleあるし。つまり9つまで。normalは12個までって感じかな。
+		/*
 		for(let i = 0; i < BALL_HUE_PALETTE.length; i++){
 			const hue = BALL_HUE_PALETTE[i];
 			this.ballGraphicArray.push(createBallGraphic(hue, 100));
 		}
+		*/
+		for(let i = 0; i < 8; i++){
+			this.ballGraphicArray.normal.push(createBallGraphic(i));
+			this.ballGraphicArray.pale.push(createBallGraphic(i, 0.7)); // 0.7はpaleRatioでこれにより薄くなる感じ。
+		}
+		// 8, 9, 10, 11は今後・・
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
   }
@@ -161,21 +197,22 @@ class System{
 		this.boardButtons.addNormalButton(w * 0.826, h * 0.21, w * 0.164, h * 0.08, atv[4], inAtv[4]);
 		this.boardButtons.initialize();
     // ボールの種類を選択する為のボタン
-		this.colorButtons = new ButtonSet();
-		this.colorButtons.addColorButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, 0);
-		this.colorButtons.addColorButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, 11);
-		this.colorButtons.addColorButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, 17);
-		this.colorButtons.addColorButton(w * 0.755, h * 0.505, w * 0.225, h * 0.09, 40);
-		this.colorButtons.addColorButton(w * 0.02, h * 0.605, w * 0.225, h * 0.09, 52);
-		this.colorButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, 64);
-		this.colorButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 76);
-		this.colorButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 90);
-		this.colorButtons.initialize();
+		// ballButtonsに改名。
+		this.ballButtons = new ButtonSet();
+		this.ballButtons.addColorButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, 0);
+		this.ballButtons.addColorButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, 1);
+		this.ballButtons.addColorButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, 2);
+		this.ballButtons.addColorButton(w * 0.755, h * 0.505, w * 0.225, h * 0.09, 3);
+		this.ballButtons.addColorButton(w * 0.02, h * 0.605, w * 0.225, h * 0.09, 4);
+		this.ballButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, 5);
+		this.ballButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 6);
+		this.ballButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 7);
+		this.ballButtons.initialize();
     // モードを変更する為のボタン
 		this.modeButtons = new ButtonSet();
-		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, 15, "ADD");
-		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, 15, "MOV");
-		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, 15, "DEL");
+		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, 8, "ADD");
+		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, 8, "MOV");
+		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, 8, "DEL");
 		this.modeButtons.initialize();
 	}
 	activateButton(){
@@ -188,8 +225,10 @@ class System{
 		this.boardId = this.boardButtons.getActiveButtonId();
 		this.modeButtons.activateButton(x, y);
 		this.modeId = this.modeButtons.getActiveButtonId();
-	  this.colorButtons.activateButton(x, y);
-		this.colorId = this.colorButtons.getActiveButtonId();
+	  //this.colorButtons.activateButton(x, y);
+		//this.colorId = this.colorButtons.getActiveButtonId();
+		this.ballButtons.activateButton(x, y);
+		this.ballKindId = this.ballButtons.getActiveButtonId();
 	}
 	addBallCheck(x, y){
 		// 最初に個数の確認
@@ -208,7 +247,9 @@ class System{
   addBall(x, y){
     // Ballを追加する
 		// kind < 8の場合はColorBallだけどそれ以降はスイッチしたほうがいいかも？Colorならpale画像も必要だし。
-		this.balls.push(new Ball(x, y, this.ballGraphicArray[this.colorId]));
+		//this.balls.push(new Ball(x, y, this.ballGraphicArray[this.colorId]));
+		// そのうちColorBallにしてpale画像も付与するけど今はこれでいい。
+		this.balls.push(new Ball(x, y, this.ballGraphicArray.normal[this.ballKindId]));
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
@@ -262,7 +303,8 @@ class System{
 		// ボタンをクラス化しました～
 		this.boardButtons.draw(gr);
 		this.modeButtons.draw(gr);
-		this.colorButtons.draw(gr);
+		//this.colorButtons.draw(gr);
+		this.ballButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
 }
@@ -307,14 +349,24 @@ class Button{
 // Buttonを2種類作る。
 // 今まで通りのパレットのやつはColorButtonで背景選択用のやつはNormalButtonでこれはactiveなときとそうでない時の
 // それぞれの画像を用意して持たせる。だからそこだけ変える。
+// 廃止しません。ごめんね！
+// あ、そうか、ColorButtonの定義を変えちゃえばいいんだ。constructorで作っちゃえばいい。その際paleRatioも指定しちゃおう。
 class ColorButton extends Button{
-	constructor(left, top, w, h, hue, innerText = ""){
+	constructor(left, top, w, h, colorId, innerText = ""){
 		super(left, top, w, h);
-		this.hue = hue;
-		this.innerText = innerText;
+		//this.hue = hue;
+		this.activeGraphic = createColorButtonGraphic(w, h, colorId, 0.0, innerText);
+		this.inActiveGraphic = createColorButtonGraphic(w, h, colorId, 0.7, innerText);
+		//this.innerText = innerText;
 	}
 	draw(gr){
+		if(this.active){
+			gr.image(this.activeGraphic, this.left, this.top);
+		}else{
+			gr.image(this.inActiveGraphic, this.left, this.top);
+		}
 		// activeでないときは色を暗くする。
+		/*
 		if(this.active){
 			gr.fill(this.hue, 100, 100);
 		}else{
@@ -325,10 +377,13 @@ class ColorButton extends Button{
 		gr.textSize(this.h / 2);
 		gr.textAlign(CENTER, CENTER);
 		gr.text(this.innerText, this.left + (this.w / 2), this.top + (this.h / 2));
+		*/
 	}
 }
 
-// 2つの画像を用意してactiveに応じて切り替える
+// 2つの画像を用意してactiveに応じて切り替える。
+// ボール選択とモード選択は薄い色にしたい感じ。ここには書かないけど。
+// 背景選択の方ではサムネイルのようにして使う。
 class NormalButton extends Button{
 	constructor(left, top, w, h, activeGraphic, inActiveGraphic){
 		super(left, top, w, h);
@@ -677,6 +732,7 @@ function createConfigGraphic(){
 // あえて若干大きめに取ってあります。
 // なんか、こうしないと色々まずいみたいなので。描画の際にも1.2倍にしてる・・原因は不明。
 // まあ若干無茶なグラデーションしてるからそこら辺でしょ。
+/*
 function createBallGraphic(hue, maxSaturation){
 	let gr = createGraphics(BALL_RADIUS * 2.4, BALL_RADIUS * 2.4);
 	gr.colorMode(HSB, 100);
@@ -689,6 +745,58 @@ function createBallGraphic(hue, maxSaturation){
 		gr.fill(hue, maxSaturation * (1 - prg), 100);
 		gr.circle(0, 0, 2 * BALL_RADIUS * (1 - prg));
 	}
+	return gr;
+}
+*/
+
+// ボール画像作り直し。paleRatioは0.0がデフォで1.0に近づくと白くなる。
+// lerpなんかおかしいので不採用
+function createBallGraphic(colorId, paleRatio = 0.0){
+	let gr = createGraphics(BALL_RADIUS * 2.4, BALL_RADIUS * 2.4);
+	gr.noStroke();
+	gr.translate(BALL_RADIUS * 1.2, BALL_RADIUS * 1.2);
+	const ballColor = color(COLOR_PALETTE[colorId]);
+	// r, g, b値を取得する。
+	const z = {r:red(ballColor), g:green(ballColor), b:blue(ballColor)};
+	// 中心が白くなるグラデーションをかける。
+	for(let i = 0; i < 100; i++){
+		const prg = 0.5 * (1 - cos(PI * (i / 100)));
+		// lerpなんかおかしいから使うのやめた。
+		const paled = paleRatio + (1 - paleRatio) * prg;
+		gr.fill(z.r + (255 - z.r) * paled, z.g + (255 - z.g) * paled, z.b + (255 - z.b) * paled);
+		gr.circle(0, 0, 2 * BALL_RADIUS * (1 - i / 100));
+	}
+	return gr;
+}
+
+// ボタン画像作る。色用と、それ以外。モード選択には別の色を使うつもり。黄緑系とかその辺。
+// ColorButtonの定義のところで作ります。アイスとかサンダーは別の関数で作ります。
+// モードとカラーボール選択はここで作りましょう。
+// lerpColorなんかおかしいので不採用（うんざり）
+function createColorButtonGraphic(w, h, colorId, paleRatio = 0.0, innerText = ""){
+  let gr = createGraphics(w, h);
+	gr.rectMode(CENTER);
+	gr.noStroke();
+	const edgeLength = min(w, h) * 0.1;
+	const ballColor = color(COLOR_PALETTE[colorId]);
+	// r, g, b値を取得する。
+	let z = {r:red(ballColor), g:green(ballColor), b:blue(ballColor)};
+	// paleRatioを反映させる。
+	z = {r:z.r + (255 - z.r) * paleRatio, g:z.g + (255 - z.g) * paleRatio, b:z.b + (255 - z.b) * paleRatio};
+	//gr.fill(lerpColor(properColor, color(255), 0.3));
+	gr.fill(z.r + (255 - z.r) * 0.3, z.g + (255 - z.g) * 0.3, z.b + (255 - z.b) * 0.3);
+	gr.rect(w / 2, h / 2, w, h);
+	//gr.fill(lerpColor(properColor, color(0), 0.3));
+	gr.fill(z.r * 0.7, z.g * 0.7, z.b * 0.7);
+	gr.rect(w / 2 + edgeLength * 0.5, h / 2 + edgeLength * 0.5, w - edgeLength, h - edgeLength);
+	//gr.fill(properColor);
+	gr.fill(z.r, z.g, z.b);
+	gr.rect(w / 2, h / 2, w - edgeLength * 2, h - edgeLength * 2);
+	if(innerText === ""){ return gr; }
+	gr.fill(0);
+	gr.textSize(h / 2);
+	gr.textAlign(CENTER, CENTER);
+	gr.text(innerText, w / 2, h / 2);
 	return gr;
 }
 
