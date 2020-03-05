@@ -35,7 +35,8 @@ const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの�
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
 const BALL_HUE_PALETTE = [0, 11, 17, 40, 52, 64, 76, 90]; // 10種類
-const BALL_MASS_FACTOR_PALETTE = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0]; // 10種類
+// MASS_FACTOR_PALETTEは廃止。代わりに1.5と2.0を画像付きで別に用意する。
+//const BALL_MASS_FACTOR_PALETTE = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0]; // 10種類
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
@@ -70,12 +71,13 @@ function draw(){
 
 // こっちをmassFactorとballGraphicにしてそれぞれ登録する。drawはballGraphicを当てはめる形。
 class Ball{
-	constructor(x, y, massFactor, ballGraphic){
+	constructor(x, y, ballGraphic){
 		this.position = createVector(x, y);
 		this.velocity = createVector(0, 0);
 		this.radius = BALL_RADIUS;
 		this.friction = FRICTION_COEFFICIENT;
-		this.massFactor = massFactor;
+		//this.massFactor = massFactor;
+		this.massFactor = 1.0; // デフォルト1.0で統一。特別なクラスの場合に上書きする。
 		this.graphic = ballGraphic;
 	}
 	setVelocity(speed, direction){
@@ -111,6 +113,17 @@ class Ball{
 	}
 }
 
+// グラフィックはボールによってはいじるかもだけどそこらへんは個別に対応できるし上書きできるからOK.
+
+// 1.ColorBall. これは色のid情報をもつ。type:"color"で、同じ色と当たると発光したのち消滅する。
+// 2.IceBall. これはtype:"ice"でグラフィックは雪の結晶っぽいのがくるくるまわる。で、パーティクルも工夫する。
+// パーティクルは画像貼り付けでやりたい。いろいろ工夫できるようになるし。手裏剣と月を追加したい。
+// 発光したボールとあたると中央の結晶の色がその色になって（基本薄い水色っぽいの）、同じ色のColorBallと当たるとそれも発光する。
+// そのまま消滅。
+// 3.ThunderBall. type:"thunder". これは発光中のColorBallが衝突したら消滅してその瞬間に同じ色のColorBallがすべて消滅する。
+// 4.HeavyBall. type:"heavy". massFactorが1.5で摩擦係数もちょっと大きくする。
+// 5.GreatHeavyBall. type:"greatheavy". massFactorが2.0で摩擦係数をさらに大きくする。
+
 // -------------------------------------------------------------------------------------------------------------------- //
 // System.
 
@@ -125,8 +138,13 @@ class System{
 	  this.createButtons();
 		this.shooter = new BallShooter();
 		this.colorId = 0;
-		this.massFactorId = 0;
+		//this.massFactorId = 0;
 		this.ballGraphicArray = []; // ボール画像
+		for(let i = 0; i < BALL_HUE_PALETTE.length; i++){
+			const hue = BALL_HUE_PALETTE[i];
+			this.ballGraphicArray.push(createBallGraphic(hue, 100));
+		}
+		/*
 		for(let i = 0; i < BALL_HUE_PALETTE.length; i++){
 			let grArray = [];
 			const hue = BALL_HUE_PALETTE[i];
@@ -136,6 +154,7 @@ class System{
 			}
 			this.ballGraphicArray.push(grArray);
 		}
+		*/
   }
 	getModeId(){
 		return this.modeId;
@@ -158,6 +177,7 @@ class System{
 		this.colorButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 76);
 		this.colorButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 90);
 		this.colorButtons.initialize();
+		/*
 		this.massFactorButtons = new ButtonSet();
 		this.massFactorButtons.addColorButton(w * 0.03, h * 0.71, w * 0.164, h * 0.08, 25, "1.0");
 		this.massFactorButtons.addColorButton(w * 0.224, h * 0.71, w * 0.164, h * 0.08, 25, "1.2");
@@ -170,6 +190,7 @@ class System{
 		this.massFactorButtons.addColorButton(w * 0.632, h * 0.81, w * 0.164, h * 0.08, 25, "3.5");
 		this.massFactorButtons.addColorButton(w * 0.826, h * 0.81, w * 0.164, h * 0.08, 25, "4.0");
 		this.massFactorButtons.initialize();
+		*/
 		this.boardButtons = new ButtonSet();
 		let atv = this.boardGraphic.active;
 		let inAtv = this.boardGraphic.inActive;
@@ -192,8 +213,8 @@ class System{
 		this.modeId = this.modeButtons.getActiveButtonId();
 	  this.colorButtons.activateButton(x, y);
 		this.colorId = this.colorButtons.getActiveButtonId();
-		this.massFactorButtons.activateButton(x, y);
-		this.massFactorId = this.massFactorButtons.getActiveButtonId();
+		//this.massFactorButtons.activateButton(x, y);
+		//this.massFactorId = this.massFactorButtons.getActiveButtonId();
 	}
 	addBallCheck(x, y){
 		// 最初に個数の確認
@@ -212,7 +233,8 @@ class System{
   addBall(x, y){
     // Ballを追加する
     //this.balls.push(new Ball(x, y, this.colorId, this.massFactorId));
-		this.balls.push(new Ball(x, y, BALL_MASS_FACTOR_PALETTE[this.massFactorId], this.ballGraphicArray[this.colorId][this.massFactorId]));
+		//this.balls.push(new Ball(x, y, BALL_MASS_FACTOR_PALETTE[this.massFactorId], this.ballGraphicArray[this.colorId][this.massFactorId]));
+		this.balls.push(new Ball(x, y, this.ballGraphicArray[this.colorId]));
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
@@ -269,7 +291,7 @@ class System{
 		this.boardButtons.draw(gr);
 		this.modeButtons.draw(gr);
 		this.colorButtons.draw(gr);
-		this.massFactorButtons.draw(gr);
+		//this.massFactorButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
 }
@@ -684,7 +706,7 @@ function createConfigGraphic(){
 // あえて若干大きめに取ってあります。
 // なんか、こうしないと色々まずいみたいなので。描画の際にも1.2倍にしてる・・原因は不明。
 // まあ若干無茶なグラデーションしてるからそこら辺でしょ。
-function createBallGraphic(hue, maxSaturation, blightNess){
+function createBallGraphic(hue, maxSaturation){
 	let gr = createGraphics(BALL_RADIUS * 2.4, BALL_RADIUS * 2.4);
 	gr.colorMode(HSB, 100);
 	gr.noStroke();
@@ -693,7 +715,7 @@ function createBallGraphic(hue, maxSaturation, blightNess){
 	for(let i = 0; i < 100; i++){
 		let prg = i / 100;
 		prg = 1 - sqrt(1 - prg * prg);
-		gr.fill(hue, maxSaturation * (1 - prg), blightNess);
+		gr.fill(hue, maxSaturation * (1 - prg), 100);
 		gr.circle(0, 0, 2 * BALL_RADIUS * (1 - prg));
 	}
 	return gr;
