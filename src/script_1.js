@@ -18,10 +18,10 @@ p5.DisableFriendlyErrors = true;
 // colorModeをHSBにして、100でmassFactorを割って、重いほど暗くなるようにする（1.0～2.0）
 // そして、動かす場合には、saturationを70とかにしてわかりやすく！
 
-// 背景、今回は茶色のグラデーションに挑戦したい。色を4段階くらいで分けて、レンガみたいに互い違いして、接しているところで
-// 違う色になるように工夫するの。
+// ボールの衝突音をhttps://soundeffect-lab.info/sound/various/various3.htmlさんの効果音ラボから拝借しました。
+// 有難く使わせていただきたいと思います。感謝します！
 
-//let balls = [];
+
 let mySystem;
 
 const AREA_WIDTH =  360;
@@ -69,8 +69,11 @@ function draw(){
 // Ball.
 
 // こっちをmassFactorとballGraphicにしてそれぞれ登録する。drawはballGraphicを当てはめる形。
+// 同じ色かどうか判定したいからやっぱcolorId要るわな。
+// って思ったけど、今一時的にグラフィック指定になってるんだよな・・ということは色は別にどうでもいいわけだ。
+// だったら継承で色情報持ってるやつを作って、そうでないものも作れるようにした方が今後を考えるといいかもね。
 class Ball{
-	constructor(x, y, massFactor, ballGraphic){
+	constructor(x, y, colorId, massFactor, ballGraphic){
 		this.position = createVector(x, y);
 		this.velocity = createVector(0, 0);
 		this.radius = BALL_RADIUS;
@@ -110,6 +113,22 @@ class Ball{
 		image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
 	}
 }
+
+// 同じ色のボールと衝突したらフラグが立って120フレーム後に消滅するがそのフレーム数というかlifeね、
+// lifeが減っていくんだけどそれと衝突した同じ色のボールにもその時点での残フレームが与えられて最終的に同時に消滅する
+// みたいなのを書きたいね。
+class ColorBall extends Ball{
+	constructor(x, y, massFactor, ballGraphic, colorId){
+		super(x, y, massFactor, ballGraphic);
+    this.type = "colored";
+		this.colorId = colorId;
+	}
+}
+
+// まず、重さを廃止してファクターが1.5と2.0のやつだけ画像付きで用意する。
+// で、それとは別にアイスボールっぽいのとサンダーボールっぽいのを実装して
+// カラーと分ける。それでおわり・・
+// 最初にボール消えるときのパーティクル実装する（DELモードでクリックするとそういうふうに消える）。もうすぐおわり。おわり・・
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // System.
