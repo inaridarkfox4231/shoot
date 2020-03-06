@@ -34,10 +34,6 @@ const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以�
 const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
-//const BALL_HUE_PALETTE = [0, 11, 17, 40, 52, 64, 76, 90]; // 8種類
-// MASS_FACTOR_PALETTEは廃止。代わりに1.5と2.0を画像付きで別に用意する。
-//const BALL_MASS_FACTOR_PALETTE = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0]; // 10種類
-
 // ColorBallの色はパレットから出すことにしました。
 // 順に赤、オレンジ、黄色、緑、水色、青、紫、ピンク。その次は"#32cd32"（黄緑）でモード選択用。
 const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32"];
@@ -166,12 +162,6 @@ class System{
 		this.ballGraphicArray.normal = [];
 		this.ballGraphicArray.pale = [];
 		// とりあえず現時点ではnormal8つとpale8つかな。iceBallにもpaleあるし。つまり9つまで。normalは12個までって感じかな。
-		/*
-		for(let i = 0; i < BALL_HUE_PALETTE.length; i++){
-			const hue = BALL_HUE_PALETTE[i];
-			this.ballGraphicArray.push(createBallGraphic(hue, 100));
-		}
-		*/
 		for(let i = 0; i < 8; i++){
 			this.ballGraphicArray.normal.push(createBallGraphic(i));
 			this.ballGraphicArray.pale.push(createBallGraphic(i, 0.7)); // 0.7はpaleRatioでこれにより薄くなる感じ。
@@ -225,8 +215,6 @@ class System{
 		this.boardId = this.boardButtons.getActiveButtonId();
 		this.modeButtons.activateButton(x, y);
 		this.modeId = this.modeButtons.getActiveButtonId();
-	  //this.colorButtons.activateButton(x, y);
-		//this.colorId = this.colorButtons.getActiveButtonId();
 		this.ballButtons.activateButton(x, y);
 		this.ballKindId = this.ballButtons.getActiveButtonId();
 	}
@@ -354,30 +342,16 @@ class Button{
 class ColorButton extends Button{
 	constructor(left, top, w, h, colorId, innerText = ""){
 		super(left, top, w, h);
-		//this.hue = hue;
 		this.activeGraphic = createColorButtonGraphic(w, h, colorId, 0.0, innerText);
 		this.inActiveGraphic = createColorButtonGraphic(w, h, colorId, 0.7, innerText);
-		//this.innerText = innerText;
 	}
 	draw(gr){
+		// 画像は大きさを変えずにそのまま使う（文字のサイズとか変わっちゃうのでサムネ方式では駄目）
 		if(this.active){
 			gr.image(this.activeGraphic, this.left, this.top);
 		}else{
 			gr.image(this.inActiveGraphic, this.left, this.top);
 		}
-		// activeでないときは色を暗くする。
-		/*
-		if(this.active){
-			gr.fill(this.hue, 100, 100);
-		}else{
-			gr.fill(this.hue, 100, 50);
-		}
-		gr.rect(this.left, this.top, this.w, this.h);
-		gr.fill(0);
-		gr.textSize(this.h / 2);
-		gr.textAlign(CENTER, CENTER);
-		gr.text(this.innerText, this.left + (this.w / 2), this.top + (this.h / 2));
-		*/
 	}
 }
 
@@ -732,22 +706,6 @@ function createConfigGraphic(){
 // あえて若干大きめに取ってあります。
 // なんか、こうしないと色々まずいみたいなので。描画の際にも1.2倍にしてる・・原因は不明。
 // まあ若干無茶なグラデーションしてるからそこら辺でしょ。
-/*
-function createBallGraphic(hue, maxSaturation){
-	let gr = createGraphics(BALL_RADIUS * 2.4, BALL_RADIUS * 2.4);
-	gr.colorMode(HSB, 100);
-	gr.noStroke();
-	gr.translate(BALL_RADIUS * 1.2, BALL_RADIUS * 1.2);
-
-	for(let i = 0; i < 100; i++){
-		let prg = i / 100;
-		prg = 1 - sqrt(1 - prg * prg);
-		gr.fill(hue, maxSaturation * (1 - prg), 100);
-		gr.circle(0, 0, 2 * BALL_RADIUS * (1 - prg));
-	}
-	return gr;
-}
-*/
 
 // ボール画像作り直し。paleRatioは0.0がデフォで1.0に近づくと白くなる。
 // lerpなんかおかしいので不採用
@@ -807,32 +765,230 @@ function createColorButtonGraphic(w, h, colorId, paleRatio = 0.0, innerText = ""
 // 発光時のグラフィックを作れるようにしよう。
 // ボードの方は色暗くしたけど、こっちは逆にinActiveなときは色を薄くしたい。ボールと揃えたいね。以上。
 
+// ---------------------------------------------------------------------------------------- //
+// drawFunction.
+// particle描画用の関数
+
+function drawTriangle(x, y, radius, rotationAngle, shapeColor){
+	// (x, y)を中心とする三角形、radiusは重心から頂点までの距離。
+	let p = [];
+	for(let i = 0; i < 3; i++){
+		p.push({x:x + radius * cos(rotationAngle + PI * i * 2 / 3), y:y + radius * sin(rotationAngle + PI * i * 2 / 3)});
+	}
+	fill(shapeColor);
+	triangle(p[0].x, p[0].y, p[1].x, p[1].y, p[2].x, p[2].y);
+}
+
+function drawSquare(x, y, radius, rotationAngle, shapeColor){
+	// (x, y)を中心とする正方形、radiusは重心から頂点までの距離。
+	let p = [];
+	for(let i = 0; i < 4; i++){
+		p.push({x:x + radius * cos(rotationAngle + PI * i * 2 / 4), y:y + radius * sin(rotationAngle + PI * i * 2 / 4)});
+	}
+	fill(shapeColor);
+	quad(p[0].x, p[0].y, p[1].x, p[1].y, p[2].x, p[2].y, p[3].x, p[3].y);
+}
+
+function drawStar(x, y, radius, rotationAngle, shapeColor){
+	// (x, y)を中心としdirection方向にradius離れててstarColorで塗りつぶしてやる感じ
+	// radiusは外接円の半径
+	let p = [];
+	for(let i = 0; i < 5; i++){
+		p.push({x:x + radius * cos(rotationAngle + 2 * PI * i / 5), y:y + radius * sin(rotationAngle + 2 * PI * i / 5)});
+	}
+	const shortLength = radius * sin(PI / 10) / cos(PI / 5);
+	for(let i = 0; i < 5; i++){
+		p.push({x:x - shortLength * cos(rotationAngle + 2 * PI * i / 5), y:y - shortLength * sin(rotationAngle + 2 * PI * i / 5)});
+	}
+	fill(shapeColor);
+	triangle(p[1].x, p[1].y, p[8].x, p[8].y, p[9].x, p[9].y);
+	triangle(p[4].x, p[4].y, p[6].x, p[6].y, p[7].x, p[7].y);
+	quad(p[0].x, p[0].y, p[2].x, p[2].y, p[5].x, p[5].y, p[3].x, p[3].y);
+}
+
+function drawCross(x, y, radius, rotationAngle, shapeColor){
+  // なんかquad4つのやつ
+	let p = [];
+	for(let i = 0; i < 4; i++){
+		p.push({x:x + radius * cos(rotationAngle + PI * i / 2), y:y + radius * sin(rotationAngle + PI * i / 2)});
+	}
+	for(let i = 0; i < 4; i++){
+		p.push({x:x + radius * 0.3 * cos(rotationAngle + PI * (i + 0.5) / 2), y:y + radius * 0.3 * sin(rotationAngle + PI * (i + 0.5) / 2)});
+	}
+	fill(shapeColor);
+	quad(x, y, p[4].x, p[4].y, p[0].x, p[0].y, p[7].x, p[7].y);
+	quad(x, y, p[5].x, p[5].y, p[1].x, p[1].y, p[4].x, p[4].y);
+	quad(x, y, p[6].x, p[6].y, p[2].x, p[2].y, p[5].x, p[5].y);
+	quad(x, y, p[7].x, p[7].y, p[3].x, p[3].y, p[6].x, p[6].y);
+}
+
+// ---------------------------------------------------------------------------------------- //
+// Particle and ParticleSystem.
+// ボールが消滅するときのエフェクト。
+
+class Particle{
+	constructor(x, y, particleHue){
+		this.center = {};
+	}
+	initialize(x, y, baseColor, drawFunction){
+		this.center.x = x;
+		this.center.y = y;
+		this.direction = random(2 * PI);
+	  this.finalDistance = random(MIN_DISTANCE, MAX_DISTANCE);
+		this.life = PARTICLE_LIFE;
+		this.color = getNearColor(baseColor);
+		this.rotationAngle = random(2 * PI); // 回転の初期位相
+		this.radius = random(MIN_RADIUS, MAX_RADIUS); // 本体の半径
+		this.alive = true;
+		this.drawFunction = drawFunction;
+		//console.log(this.z.r, this.z.g, this.z.b);
+	}
+	update(){
+		this.life--;
+		this.rotationAngle += PARTICLE_ROTATION_SPEED;
+		if(this.life === 0){ this.alive = false; }
+	}
+	draw(){
+		let prg = (PARTICLE_LIFE - this.life) / PARTICLE_LIFE;
+		prg = sqrt(prg * (2 - prg));
+		//const particleColor = color(this.colorData.r, this.colorData.g, this.colorData.b, 255 * (1 - prg));
+		this.color.setAlpha(255 * (1 - prg));
+		const x = this.center.x + this.finalDistance * prg * cos(this.direction);
+		const y = this.center.y + this.finalDistance * prg * sin(this.direction);
+    this.drawFunction(x, y, this.radius, this.rotationAngle, this.color);
+	}
+	remove(){
+		if(this.alive){ return; }
+		this.belongingArray.remove(this);
+		particlePool.recycle(this);
+	}
+}
+
+// クリックするとその位置にパーティクルが出現するようにしたいのです。うん。
+class ParticleSystem{
+	constructor(){
+		this.particleArray = new CrossReferenceArray();
+	}
+	createParticle(x, y, baseColor, drawFunction){
+		for(let i = 0; i < PARTICLE_NUM; i++){
+			let ptc = particlePool.use();
+			ptc.initialize(x, y, baseColor, drawFunction);
+			this.particleArray.add(ptc);
+		}
+	}
+	update(){
+		this.particleArray.loop("update");
+	}
+	draw(){
+		this.particleArray.loop("draw");
+	}
+	remove(){
+		this.particleArray.loopReverse("remove");
+	}
+}
+
+// ---------------------------------------------------------------------------------------- //
+// ObjectPool.
+// particleを出すためのプール
+
+class ObjectPool{
+	constructor(objectFactory = (() => ({})), initialCapacity = 0){
+		this.objPool = [];
+		this.nextFreeSlot = null; // 使えるオブジェクトの存在位置を示すインデックス
+		this.objectFactory = objectFactory;
+		this.grow(initialCapacity);
+	}
+	use(){
+		if(this.nextFreeSlot == null || this.nextFreeSlot == this.objPool.length){
+		  this.grow(this.objPool.length || 5); // 末尾にいるときは長さを伸ばす感じ。lengthが未定義の場合はとりあえず5.
+		}
+		let objToUse = this.objPool[this.nextFreeSlot]; // FreeSlotのところにあるオブジェクトを取得
+		this.objPool[this.nextFreeSlot++] = EMPTY_SLOT; // その場所はemptyを置いておく、そしてnextFreeSlotを一つ増やす。
+		return objToUse; // オブジェクトをゲットする
+	}
+	recycle(obj){
+		if(this.nextFreeSlot == null || this.nextFreeSlot == -1){
+			this.objPool[this.objPool.length] = obj; // 図らずも新しくオブジェクトが出来ちゃった場合は末尾にそれを追加
+		}else{
+			// 考えづらいけど、this.nextFreeSlotが0のときこれが実行されるとobjPool[-1]にobjが入る。
+			// そのあとでrecycleが発動してる間は常に末尾にオブジェクトが増え続けるからFreeSlotは-1のまま。
+			// そしてuseが発動した時にその-1にあったオブジェクトが使われてそこにはEMPTY_SLOTが設定される
+			this.objPool[--this.nextFreeSlot] = obj;
+		}
+	}
+	grow(count = this.objPool.length){ // 長さをcountにしてcount個のオブジェクトを追加する
+		if(count > 0 && this.nextFreeSlot == null){
+			this.nextFreeSlot = 0; // 初期状態なら0にする感じ
+		}
+		if(count > 0){
+			let curLen = this.objPool.length; // curLenはcurrent Lengthのこと
+			this.objPool.length += Number(count); // countがなんか変でも数にしてくれるからこうしてるみたい？"123"とか。
+			// こうするとかってにundefinedで伸ばされるらしい・・長さプロパティだけ増やされる。
+			// 基本的にはlengthはpushとか末尾代入（a[length]=obj）で自動的に増えるけどこうして勝手に増やすことも出来るのね。
+			for(let i = curLen; i < this.objPool.length; i++){
+				// add new obj to pool.
+				this.objPool[i] = this.objectFactory();
+			}
+			return this.objPool.length;
+		}
+	}
+	size(){
+		return this.objPool.length;
+	}
+}
+
+// ---------------------------------------------------------------------------------------- //
+// CrossReferenceArray.
+// particleを格納するための配列。
+
+class CrossReferenceArray extends Array{
+	constructor(){
+    super();
+	}
+  add(element){
+    this.push(element);
+    element.belongingArray = this; // 所属配列への参照
+  }
+  remove(element){
+    let index = this.indexOf(element, 0);
+    this.splice(index, 1); // elementを配列から排除する
+  }
+  loop(methodName){
+		if(this.length === 0){ return; }
+    // methodNameには"update"とか"display"が入る。まとめて行う処理。
+		for(let i = 0; i < this.length; i++){
+			this[i][methodName]();
+		}
+  }
+	loopReverse(methodName){
+		if(this.length === 0){ return; }
+    // 逆から行う。排除とかこうしないとエラーになる。もうこりごり。
+		for(let i = this.length - 1; i >= 0; i--){
+			this[i][methodName]();
+		}
+  }
+	clear(){
+		this.length = 0;
+	}
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// Utility.
+// 色関連など
+
+function getNearColor(baseColor){
+	// baseColorに近い色を返す。
+	const r = constrain(red(baseColor) + random(-50, 50), 0, 255);
+	const g = constrain(green(baseColor) + random(-50, 50), 0, 255);
+	const b = constrain(blue(baseColor) + random(-50, 50), 0, 255);
+	//return {r:floor(r), g:floor(g), b:floor(b)};
+	return color(floor(r), floor(g), floor(b));
+}
+
 // -------------------------------------------------------------------------------------------------------------------- //
 // Pattern.
 // まあ、ボール作って速度与えてってやろうと思えばできるからね・・インタラクションないけど面白いとは思う（わからんけどね）。
 // はい。冗談おわり。デバッグしようね・・・
-
-function ptn0(){
-  let b_self = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.2, 0);
-  let b_top = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.7, 7);
-  let b1 = new Ball(AREA_WIDTH * 0.45, AREA_WIDTH * 0.8, 1);
-  let b2 = new Ball(AREA_WIDTH * 0.55, AREA_WIDTH * 0.8, 1);
-  let b3 = new Ball(AREA_WIDTH * 0.4, AREA_WIDTH * 0.9, 2);
-  let b4 = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 0.9, 2);
-  let b5 = new Ball(AREA_WIDTH * 0.6, AREA_WIDTH * 0.9, 2);
-  let b6 = new Ball(AREA_WIDTH * 0.35, AREA_WIDTH * 1.0, 3);
-  let b7 = new Ball(AREA_WIDTH * 0.45, AREA_WIDTH * 1.0, 3);
-  let b8 = new Ball(AREA_WIDTH * 0.55, AREA_WIDTH * 1.0, 3);
-  let b9 = new Ball(AREA_WIDTH * 0.65, AREA_WIDTH * 1.0, 3);
-	let b10 = new Ball(AREA_WIDTH * 0.3, AREA_WIDTH * 1.1, 4);
-  let b11 = new Ball(AREA_WIDTH * 0.4, AREA_WIDTH * 1.1, 4);
-  let b12 = new Ball(AREA_WIDTH * 0.5, AREA_WIDTH * 1.1, 4);
-  let b13 = new Ball(AREA_WIDTH * 0.6, AREA_WIDTH * 1.1, 4);
-  let b14 = new Ball(AREA_WIDTH * 0.7, AREA_WIDTH * 1.1, 4);
-
-  b_self.setVelocity(35, PI / 2 - 0.1);
-  mySystem.balls = [b_self, b_top, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14];
-}
 
 // だめだ。めり込み処理やらないとおかしなことになる（特に見栄えが）。
 // ちゃんと動いてるけどね・・きびしいな・・・
