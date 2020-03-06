@@ -37,7 +37,7 @@ const AREA_WIDTH =  360;
 const AREA_HEIGHT = AREA_WIDTH * 1.5;
 const BALL_RADIUS = AREA_WIDTH * 0.045; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
 const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.005; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
-const FRICTION_COEFFICIENT = 0.01; // 摩擦の大きさ
+const FRICTION_COEFFICIENT = 0.02; // 摩擦の大きさ（0.01から0.02に上げてみた）
 const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）
 
 const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
@@ -45,7 +45,8 @@ const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
 // ColorBallの色はパレットから出すことにしました。
 // 順に赤、オレンジ、黄色、緑、水色、青、紫、ピンク。その次は"#32cd32"（黄緑）でモード選択用。
-const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32"];
+// 9番目としてアイスボールが消えるときの色。シアンにする。
+const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32", "#00a1e9"];
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
@@ -99,7 +100,7 @@ class Ball{
 		this.friction = FRICTION_COEFFICIENT;
 		this.massFactor = 1.0; // デフォルト1.0で統一。特別なクラスの場合に上書きする。
 		this.graphic = ballGraphic;
-		this.life = 1;
+		this.alive = true; // aliveがfalseになったら排除する。
 	}
 	setVelocity(speed, direction){
 		this.velocity.set(speed * cos(direction), speed * sin(direction));
@@ -122,7 +123,8 @@ class Ball{
 		this.velocity.mult(1 - this.friction);
 	}
 	kill(){
-		this.life = 0; // 強制的に殺す。・・これ使えばdeleteのところにあれこれ書く必要ないな・・。最後のremoveObjectsで消せるやん。
+		this.alive = false;
+		//this.life = 0; // 強制的に殺す。・・これ使えばdeleteのところにあれこれ書く必要ないな・・。最後のremoveObjectsで消せるやん。
 	}
 	hit(_system, _other){ /* 衝突した際のもろもろ。 */ }
 	update(){
@@ -136,6 +138,8 @@ class Ball{
 	}
 }
 
+// 動きが止まると消える？？
+// lifeは廃止かな・・
 class ColorBall extends Ball{
 	constructor(x, y, ballGraphic, paleGraphic, colorId){
 		super(x, y, ballGraphic);
@@ -143,9 +147,10 @@ class ColorBall extends Ball{
 		this.paleGraphic = paleGraphic;
 		this.colorId = colorId;
 		this.pale = false;
-		this.life = 120; // paleがtrueのとき減り続けて0になると消滅する
+		//this.life = 180; // paleがtrueのとき減り続けて0になると消滅する
 	}
 	hit(_system, _other){
+		// アイスとぶつかっても何も起きない。
 		switch(_other.type){
 			case "color":
 			  // カラー同士の場合、色が同じなら発光する。おわり。
@@ -155,8 +160,44 @@ class ColorBall extends Ball{
 	}
 	update(){
 		super.update();
-		if(this.pale){ this.life--; }
+		if(this.pale && this.velocity.mag() === 0){ this.kill(); }
 		// lifeが0のBallの排除はSystem側で行う。その際パーティクルを出したり、種類に応じてまあいろいろやる。
+	}
+	draw(){
+		if(this.pale){
+			image(this.paleGraphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
+		}else{
+			image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
+		}
+	}
+}
+
+// 相手が発光しているときに衝突すると自身も発光する。それだけ。
+// あと今気付いたけど動きが止まると消えるみたい。
+// Thunderとかは発光しないで消滅するから不要よね。
+class IceBall extends Ball{
+	constructor(x, y, ballGraphic, paleGraphic){
+		super(x, y, ballGraphic);
+		this.type = "ice";
+		this.paleGraphic = paleGraphic;
+		this.pale = false;
+		this.life = 180;
+	}
+	hit(_system, _other){
+		// 相手が発光していれば発光する。
+		switch(_other.type){
+			case "color":
+				if(_other.pale){ this.pale = true; }
+				break;
+			case "ice":
+				if(_other.pale){ this.pale = true; }
+				break;
+		}
+	}
+	update(){
+		super.update();
+		if(this.pale && this.velocity.mag() === 0){ this.kill(); }
+		// lifeが0になったら排除。
 	}
 	draw(){
 		if(this.pale){
@@ -183,10 +224,7 @@ class ColorBall extends Ball{
 // スパゲティが嫌ならhitでSystemを渡すか、System側でThunderを排除するときに・・それやばいな。だめ。
 
 // 3, 4, 5は発光しないので、継承で書いた方がいいね・・
-// すべてのボールにlife=1を定義します。ボールによってはlifeが減らないので・・これで「lifeが0なら排除してパーティクルぽーん」
-// ってできるでしょ。出す際に色とか・・カラーとアイスとサンダーとホワイトで出し方が違うからその部分はメソッド化するべきでしょうね。
-// でないと同じ事を2箇所に書く羽目になる。
-// ホワイトはlifeを直接0にする感じ。
+// lifeを廃止してaliveにしてaliveがfalseのときに排除させる。
 
 // いわゆる「手玉」も継承で書くべきか・・ぬーん。
 
@@ -212,6 +250,9 @@ class System{
 			this.ballGraphic.normal.push(createBallGraphic(i));
 			this.ballGraphic.pale.push(createBallGraphic(i, 0.7)); // 0.7はpaleRatioでこれにより薄くなる感じ。
 		}
+		// アイスボールのグラフィック
+		this.ballGraphic.normal.push(createIceBallGraphic());
+		this.ballGraphic.pale.push(createIceBallGraphic(0.5));
 		// 8, 9, 10, 11は今後・・
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
@@ -224,6 +265,7 @@ class System{
 	createButtons(){
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
+		const r = BALL_RADIUS;
     // 背景選択用ボタン
 		this.boardButtons = new ButtonSet();
 		let atv = this.boardGraphic.active;
@@ -245,6 +287,9 @@ class System{
 		this.ballButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, 5);
 		this.ballButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 6);
 		this.ballButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 7);
+		const iceActive = createIceButtonGraphic(r * 2.4, r * 2.4);
+		const iceNonActive = createIceButtonGraphic(r * 2.4, r * 2.4, 0.5);
+		this.ballButtons.addNormalButton(w * 0.02, h * 0.705, w * 0.225, h * 0.09, iceActive, iceNonActive);
 		this.ballButtons.initialize();
     // モードを変更する為のボタン
 		this.modeButtons = new ButtonSet();
@@ -289,7 +334,14 @@ class System{
 		//this.balls.push(new Ball(x, y, this.ballGraphicArray.normal[this.ballKindId]));
 		const normalGraphic = this.ballGraphic.normal[this.ballKindId];
 		const paleGraphic = this.ballGraphic.pale[this.ballKindId];
-		this.balls.push(new ColorBall(x, y, normalGraphic, paleGraphic, this.ballKindId));
+		if(this.ballKindId < 8){
+		  this.balls.push(new ColorBall(x, y, normalGraphic, paleGraphic, this.ballKindId));
+		}
+		switch(this.ballKindId){
+			case 8:
+			  this.balls.push(new IceBall(x, y, normalGraphic, paleGraphic));
+				break;
+		}
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールを返すがなければundefinedを返す。
@@ -320,6 +372,8 @@ class System{
 			case "color":
 			  this.particles.createParticle(_ball.position.x, _ball.position.y, color(COLOR_PALETTE[_ball.colorId]), drawStar, 30);
 				break;
+			case "ice":
+			  this.particles.createParticle(_ball.position.x, _ball.position.y, color(COLOR_PALETTE[9]), drawCross, 30);
 		}
 	}
   update(){
@@ -364,7 +418,7 @@ class System{
 		// lifeが0になったボールの排除やパーティクルの排除などを行う。
 		for(let i = this.balls.length - 1; i >= 0; i--){
 			const _ball = this.balls[i];
-			if(_ball.life === 0){
+			if(!_ball.alive){
 				this.balls.splice(i, 1);
 				this.createParticleAtRemove(_ball);
 			}
@@ -789,15 +843,55 @@ function createConfigGraphic(){
 // ボール画像作り直し。paleRatioは0.0がデフォで1.0に近づくと白くなる。
 // HSBやめたから普通にlerpColorで作る。
 function createBallGraphic(colorId, paleRatio = 0.0){
-	let gr = createGraphics(BALL_RADIUS * 2.4, BALL_RADIUS * 2.4);
+  const r = BALL_RADIUS;
+
+	let gr = createGraphics(r * 2.4, r * 2.4);
 	gr.noStroke();
-	gr.translate(BALL_RADIUS * 1.2, BALL_RADIUS * 1.2);
+	gr.translate(r * 1.2, r * 1.2);
 	const ballColor = color(COLOR_PALETTE[colorId]);
 	// 中心が白くなるグラデーションをかける。
 	for(let i = 0; i < 100; i++){
 		const prg = 0.5 * (1 - cos(PI * (i / 100)));
 		gr.fill(lerpColor(ballColor, color(255), paleRatio + (1 - paleRatio) * prg));
-		gr.circle(0, 0, 2 * BALL_RADIUS * (1 - i / 100));
+		gr.circle(0, 0, 2 * r * (1 - i / 100));
+	}
+	return gr;
+}
+
+// アイスボール作ろうぜ
+function createIceBallGraphic(paleRatio = 0.0){
+	// まずradiusの20%まで外側から水色→白のグラデーションで30分割くらいで円弧を描く（noFill）
+	// ベースは薄い水色で。
+	// 最後に濃い水色のダイヤを30°ずつ回転させて6つ描く感じ。中心に半径の20%の円を描いてその上を点が動く感じ。
+  const r = BALL_RADIUS;
+
+  let gr = createGraphics(r * 2.4, r * 2.4);
+	gr.noStroke();
+	gr.translate(r * 1.2, r * 1.2);
+	// baseColor.水色系。
+	const baseColor = lerpColor(color(0, 162, 232), color(255), paleRatio);
+	gr.fill(lerpColor(baseColor, color(255), 0.7));
+	gr.circle(0, 0, r * 2);
+	gr.noFill();
+	for(let i = 0; i < 30; i++){
+		let prg = i / 30;
+		prg = pow(prg, 2);
+		gr.stroke(lerpColor(baseColor, color(255), prg));
+		gr.strokeWeight(r * 0.4 / 30);
+		gr.arc(0, 0, r * (2 - 0.8 * prg), r * (2 - 0.8 * prg), 0, 2 * PI);
+	}
+	gr.noStroke();
+	let p = [];
+	for(let k = 0; k < 12; k++){
+		p.push({x:r * 0.9 * cos(PI * k / 6), y:r * 0.9 * sin(PI * k / 6)});
+	}
+	for(let k = 0; k < 12; k++){
+		// PI/2足すことで記述を簡潔にする。
+		p.push({x:r * 0.1 * cos(PI * k / 6 + PI / 2), y:r * 0.1 * sin(PI * k / 6 + PI / 2)});
+	}
+	gr.fill(baseColor);
+	for(let k = 0; k < 6; k++){
+		gr.quad(p[k].x, p[k].y, p[k + 12].x, p[k + 12].y, p[k + 6].x, p[k + 6].y, p[k + 18].x, p[k + 18].y);
 	}
 	return gr;
 }
@@ -828,6 +922,20 @@ function createColorButtonGraphic(w, h, colorId, paleRatio = 0.0, innerText = ""
 	gr.textSize(h / 2);
 	gr.textAlign(CENTER, CENTER);
 	gr.text(innerText, w / 2, h / 2);
+	return gr;
+}
+
+// アイスボール用グラフィック。
+function createIceButtonGraphic(w, h, paleRatio = 0.0){
+	let gr = createGraphics(w, h);
+	const baseColor = lerpColor(color(0, 162, 232), color(255), paleRatio);
+	gr.noStroke();
+	gr.fill(lerpColor(baseColor, color(255), 0.3));
+	gr.rect(0, 0, w, h);
+	const iceBallGraphic = createIceBallGraphic(paleRatio);
+	const t = min(w, h);
+	const r = BALL_RADIUS;
+	gr.image(iceBallGraphic, w/2 - t/2, h/2 - t/2, t, t, 0, 0, r * 2.4, r * 2.4);
 	return gr;
 }
 
