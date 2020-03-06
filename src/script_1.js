@@ -99,6 +99,7 @@ class Ball{
 		this.friction = FRICTION_COEFFICIENT;
 		this.massFactor = 1.0; // デフォルト1.0で統一。特別なクラスの場合に上書きする。
 		this.graphic = ballGraphic;
+		this.life = 1;
 	}
 	setVelocity(speed, direction){
 		this.velocity.set(speed * cos(direction), speed * sin(direction));
@@ -120,6 +121,7 @@ class Ball{
 		// 摩擦を与える
 		this.velocity.mult(1 - this.friction);
 	}
+	hit(_system, _other){ /* 衝突した際のもろもろ。 */ }
 	update(){
 		this.position.add(this.velocity);
 		this.applyReflection();
@@ -139,6 +141,9 @@ class ColorBall extends Ball{
 		this.colorId = colorId;
 		this.pale = false;
 		this.life = 120; // paleがtrueのとき減り続けて0になると消滅する
+	}
+	kill(){
+		this.life = 0; // 強制的に殺す。・・これ使えばdeleteのところにあれこれ書く必要ないな・・。最後のremoveObjectsで消せるやん。
 	}
 	update(){
 		super.update();
@@ -161,11 +166,21 @@ class ColorBall extends Ball{
 // パーティクルは画像貼り付けでやりたい。いろいろ工夫できるようになるし。手裏剣と月を追加したい。
 // 発光したボールとあたると中央の結晶の色がその色になって（基本薄い水色っぽいの）、同じ色のColorBallと当たるとそれも発光する。
 // そのまま消滅。
-// 3.ThunderBall. type:"thunder". これは発光中のColorBallが衝突したら消滅してその瞬間に同じ色のColorBallがすべて消滅する。
+// 3.ThunderBall. type:"thunder". これはColorBallが衝突したら消滅してその瞬間に同じ色のColorBallがすべて消滅する。
 // 4.HeavyBall. type:"heavy". massFactorが2.0で摩擦係数も3倍の0.03にする。
 // 5.WhiteBall. type:"white". 手玉とwhite以外のボールが当たった場合に消滅してそのボールと同じ種類のボールを同じ場所に出現させる。
+// (Systemをhitで渡すからそれ使って直接生成する感じですかね・・)ちなみに位置と速度をコピーする。
+
+// ThunderはColorBallが当たったらlifeを0にする。そしてSystemにアクセスしてすべての同じ色のColorBallをkillする。（スパゲティになる・・）
+// スパゲティが嫌ならhitでSystemを渡すか、System側でThunderを排除するときに・・それやばいな。だめ。
 
 // 3, 4, 5は発光しないので、継承で書いた方がいいね・・
+// すべてのボールにlife=1を定義します。ボールによってはlifeが減らないので・・これで「lifeが0なら排除してパーティクルぽーん」
+// ってできるでしょ。出す際に色とか・・カラーとアイスとサンダーとホワイトで出し方が違うからその部分はメソッド化するべきでしょうね。
+// でないと同じ事を2箇所に書く羽目になる。
+// ホワイトはlifeを直接0にする感じ。
+
+// いわゆる「手玉」も継承で書くべきか・・ぬーん。
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // System.
@@ -269,16 +284,16 @@ class System{
 		this.balls.push(new ColorBall(x, y, normalGraphic, paleGraphic, this.ballKindId));
   }
   findBall(x, y){
-    // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
+    // Ballが(x, y)にあるかどうか調べてあればそのボールを返すがなければundefinedを返す。
     for(let i = 0; i < this.balls.length; i++){
       const _ball = this.balls[i];
-      if(dist(_ball.position.x, _ball.position.y, x, y) < _ball.radius){ return i; }
+      if(dist(_ball.position.x, _ball.position.y, x, y) < _ball.radius){ return _ball; }
     }
-    return -1;
+    return undefined;
   }
-	setShootingBall(id){
+	setShootingBall(_ball){
 		// id番のボールをセットする。
-		this.shooter.setTarget(this.balls[id]);
+		this.shooter.setTarget(_ball);
 	}
 	shootBall(){
 		// セットしたボールを離す。
@@ -286,9 +301,13 @@ class System{
 		// ボールが動くかどうかにかかわらずリリースする。
 		this.shooter.release();
 	}
-	deleteBall(id){
+	deleteBall(_ball){
     // Ballを削除する
 		// lifeどうのではなく、直接排除するので、パーティクルの実験にもってこい。
+		// idでなくball自体を渡すべき？か・・排除は最後にやるし。ここではkillするだけでいいね。
+		_ball.kill();
+
+		/*
 		const _ball = this.balls[id];
 		switch(_ball.type){
 			case "color":
@@ -296,7 +315,15 @@ class System{
 				break;
 		}
     this.balls.splice(id, 1);
+		*/
   }
+	createParticleAtRemove(_ball){
+		switch(_ball.type){
+			case "color":
+			  this.particles.createParticle(_ball.position.x, _ball.position.y, color(COLOR_PALETTE[_ball.colorId]), drawStar, 30);
+				break;
+		}
+	}
   update(){
     for(let b of this.balls){ b.update(); }
 		this.particles.update(); // particleのupdate.
@@ -335,6 +362,13 @@ class System{
   }
 	removeObjects(){
 		// lifeが0になったボールの排除やパーティクルの排除などを行う。
+		for(let i = this.balls.length - 1; i >= 0; i--){
+			const _ball = this.balls[i];
+			if(_ball.life === 0){
+				this.balls.splice(i, 1);
+				this.createParticleAtRemove(_ball);
+			}
+		}
 		this.particles.remove();
 	}
 }
@@ -602,13 +636,15 @@ function mousePressed(){
 			break;
 		case 1:
 		  /* MOVE */
-			const shootingBallId = mySystem.findBall(x, y);
-			if(shootingBallId >= 0){ mySystem.setShootingBall(shootingBallId); }
+			const shootingBall = mySystem.findBall(x, y);
+			//if(shootingBall !== undefined){ mySystem.setShootingBall(shootingBall); }
+			if(shootingBall){ mySystem.setShootingBall(shootingBall); }
 			break;
 		case 2:
 		  /* DELETE */
-			const deletingBallId = mySystem.findBall(x, y);
-			if(deletingBallId >= 0){ mySystem.deleteBall(deletingBallId); }
+			const deletingBall = mySystem.findBall(x, y);
+			//if(deletingBall !== undefined){ mySystem.deleteBall(deletingBall); }
+			if(deletingBall){ mySystem.deleteBall(deletingBall); }
 			break;
 	}
   return false;
