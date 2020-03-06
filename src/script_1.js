@@ -121,6 +121,9 @@ class Ball{
 		// 摩擦を与える
 		this.velocity.mult(1 - this.friction);
 	}
+	kill(){
+		this.life = 0; // 強制的に殺す。・・これ使えばdeleteのところにあれこれ書く必要ないな・・。最後のremoveObjectsで消せるやん。
+	}
 	hit(_system, _other){ /* 衝突した際のもろもろ。 */ }
 	update(){
 		this.position.add(this.velocity);
@@ -142,8 +145,13 @@ class ColorBall extends Ball{
 		this.pale = false;
 		this.life = 120; // paleがtrueのとき減り続けて0になると消滅する
 	}
-	kill(){
-		this.life = 0; // 強制的に殺す。・・これ使えばdeleteのところにあれこれ書く必要ないな・・。最後のremoveObjectsで消せるやん。
+	hit(_system, _other){
+		switch(_other.type){
+			case "color":
+			  // カラー同士の場合、色が同じなら発光する。おわり。
+			  if(_other.colorId === this.colorId){ this.pale = true; }
+				break;
+		}
 	}
 	update(){
 		super.update();
@@ -306,16 +314,6 @@ class System{
 		// lifeどうのではなく、直接排除するので、パーティクルの実験にもってこい。
 		// idでなくball自体を渡すべき？か・・排除は最後にやるし。ここではkillするだけでいいね。
 		_ball.kill();
-
-		/*
-		const _ball = this.balls[id];
-		switch(_ball.type){
-			case "color":
-			  this.particles.createParticle(_ball.position.x, _ball.position.y, color(COLOR_PALETTE[_ball.colorId]), drawStar, 30);
-				break;
-		}
-    this.balls.splice(id, 1);
-		*/
   }
 	createParticleAtRemove(_ball){
 		switch(_ball.type){
@@ -335,6 +333,8 @@ class System{
   			const _other = this.balls[otherId];
   			if(!collisionCheck(_ball, _other)){ continue; }
   			perfectCollision(_ball, _other);
+				_ball.hit(this, _other);
+				_other.hit(this, _ball);
   		}
   	}
   }
