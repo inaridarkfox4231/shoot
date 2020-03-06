@@ -84,6 +84,7 @@ function draw(){
   mySystem.update();
   mySystem.applyCollide();
   mySystem.draw();
+	mySystem.removeObjects();
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
@@ -133,6 +134,7 @@ class Ball{
 class ColorBall extends Ball{
 	constructor(x, y, ballGraphic, paleGraphic, colorId){
 		super(x, y, ballGraphic);
+		this.type = "color";
 		this.paleGraphic = paleGraphic;
 		this.colorId = colorId;
 		this.pale = false;
@@ -190,6 +192,7 @@ class System{
 		// 8, 9, 10, 11は今後・・
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
+		// 次に、パーティクルシステム。
 		this.particles = new ParticleSystem();
   }
 	getModeId(){
@@ -285,10 +288,18 @@ class System{
 	}
 	deleteBall(id){
     // Ballを削除する
+		// lifeどうのではなく、直接排除するので、パーティクルの実験にもってこい。
+		const _ball = this.balls[id];
+		switch(_ball.type){
+			case "color":
+			  this.particles.createParticle(_ball.position.x, _ball.position.y, color(COLOR_PALETTE[_ball.colorId]), drawStar, 30);
+				break;
+		}
     this.balls.splice(id, 1);
   }
   update(){
     for(let b of this.balls){ b.update(); }
+		this.particles.update(); // particleのupdate.
   }
   applyCollide(){
     for(let ballId = 0; ballId < this.balls.length; ballId++){
@@ -303,6 +314,7 @@ class System{
   draw(){
 		image(this.boardGraphic.active[this.boardId], 0, 0);
     for(let b of this.balls){ b.draw(); }
+		this.particles.draw(); // particleのdraw.
     this.shooter.draw(); // うまくいくか
     this.drawConfig();
   }
@@ -321,6 +333,10 @@ class System{
 		this.ballButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
+	removeObjects(){
+		// lifeが0になったボールの排除やパーティクルの排除などを行う。
+		this.particles.remove();
+	}
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
@@ -885,6 +901,7 @@ class Particle{
 }
 
 // クリックするとその位置にパーティクルが出現するようにしたいのです。うん。
+// デモじゃないのでそれはありえません（ごめんね）
 class ParticleSystem{
 	constructor(){
 		this.particleArray = new CrossReferenceArray();
