@@ -478,7 +478,8 @@ class BallShooter{
 		let end = createVector((BALL_RADIUS + arrowLength) * cos(direction), (BALL_RADIUS + arrowLength) * sin(direction));
 		start.add(this.target.position);
 		end.add(this.target.position);
-		stroke(55 + 45 * (arrowLength / ARROWLENGTH_LIMIT), 100, 100);
+		stroke(lerpColor(color(63, 72, 204), color(237, 28, 36), arrowLength / ARROWLENGTH_LIMIT));
+		//stroke(55 + 45 * (arrowLength / ARROWLENGTH_LIMIT), 100, 100);
 		strokeWeight(6.0);
 		line(start.x, start.y, end.x, end.y);
     let upperArrow = createVector((arrowLength * 0.3) * cos(direction + PI * 0.85), (arrowLength * 0.3) * sin(direction + PI * 0.85));
@@ -734,20 +735,16 @@ function createConfigGraphic(){
 // まあ若干無茶なグラデーションしてるからそこら辺でしょ。
 
 // ボール画像作り直し。paleRatioは0.0がデフォで1.0に近づくと白くなる。
-// lerpなんかおかしいので不採用
+// HSBやめたから普通にlerpColorで作る。
 function createBallGraphic(colorId, paleRatio = 0.0){
 	let gr = createGraphics(BALL_RADIUS * 2.4, BALL_RADIUS * 2.4);
 	gr.noStroke();
 	gr.translate(BALL_RADIUS * 1.2, BALL_RADIUS * 1.2);
 	const ballColor = color(COLOR_PALETTE[colorId]);
-	// r, g, b値を取得する。
-	const z = {r:red(ballColor), g:green(ballColor), b:blue(ballColor)};
 	// 中心が白くなるグラデーションをかける。
 	for(let i = 0; i < 100; i++){
 		const prg = 0.5 * (1 - cos(PI * (i / 100)));
-		// lerpなんかおかしいから使うのやめた。
-		const paled = paleRatio + (1 - paleRatio) * prg;
-		gr.fill(z.r + (255 - z.r) * paled, z.g + (255 - z.g) * paled, z.b + (255 - z.b) * paled);
+		gr.fill(lerpColor(ballColor, color(255), paleRatio + (1 - paleRatio) * prg));
 		gr.circle(0, 0, 2 * BALL_RADIUS * (1 - i / 100));
 	}
 	return gr;
@@ -756,26 +753,24 @@ function createBallGraphic(colorId, paleRatio = 0.0){
 // ボタン画像作る。色用と、それ以外。モード選択には別の色を使うつもり。黄緑系とかその辺。
 // ColorButtonの定義のところで作ります。アイスとかサンダーは別の関数で作ります。
 // モードとカラーボール選択はここで作りましょう。
-// lerpColorなんかおかしいので不採用（うんざり）
+// HSBやめたから普通にlerpColorで作る。
 function createColorButtonGraphic(w, h, colorId, paleRatio = 0.0, innerText = ""){
   let gr = createGraphics(w, h);
 	gr.rectMode(CENTER);
 	gr.noStroke();
 	const edgeLength = min(w, h) * 0.1;
-	const ballColor = color(COLOR_PALETTE[colorId]);
-	// r, g, b値を取得する。
-	let z = {r:red(ballColor), g:green(ballColor), b:blue(ballColor)};
-	// paleRatioを反映させる。
-	z = {r:z.r + (255 - z.r) * paleRatio, g:z.g + (255 - z.g) * paleRatio, b:z.b + (255 - z.b) * paleRatio};
-	//gr.fill(lerpColor(properColor, color(255), 0.3));
-	gr.fill(z.r + (255 - z.r) * 0.3, z.g + (255 - z.g) * 0.3, z.b + (255 - z.b) * 0.3);
+	// paleRatioで未選択の場合に色が薄くなるようにする。
+  const baseColor = lerpColor(color(COLOR_PALETTE[colorId]), color(255), paleRatio);
+  // 薄い部分
+	gr.fill(lerpColor(baseColor, color(255), 0.3));
 	gr.rect(w / 2, h / 2, w, h);
-	//gr.fill(lerpColor(properColor, color(0), 0.3));
-	gr.fill(z.r * 0.7, z.g * 0.7, z.b * 0.7);
+  // 濃い部分
+	gr.fill(lerpColor(baseColor, color(0), 0.3));
 	gr.rect(w / 2 + edgeLength * 0.5, h / 2 + edgeLength * 0.5, w - edgeLength, h - edgeLength);
-	//gr.fill(properColor);
-	gr.fill(z.r, z.g, z.b);
+  // 本体。必要なら文字を記述する。
+	gr.fill(baseColor);
 	gr.rect(w / 2, h / 2, w - edgeLength * 2, h - edgeLength * 2);
+
 	if(innerText === ""){ return gr; }
 	gr.fill(0);
 	gr.textSize(h / 2);
