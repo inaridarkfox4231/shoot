@@ -40,7 +40,18 @@ const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
-// 0:ADD, 1:MOVE, 2:DELETE.
+
+// particle関連
+let particlePool;
+const EMPTY_SLOT = Object.freeze(Object.create(null)); // ダミーオブジェクト
+
+const PARTICLE_LIFE = 60; // 寿命
+const PARTICLE_ROTATION_SPEED = 0.12; // 形状の回転スピード
+const MIN_DISTANCE = 30; // 到達距離
+const MAX_DISTANCE = 60;
+const MIN_RADIUS = 6; // 大きさ
+const MAX_RADIUS = 24;
+const PARTICLE_NUM = 20; // 一度に出力する個数
 
 const prefix = "https://inaridarkfox4231.github.io/assets/shoot/";
 
@@ -53,8 +64,9 @@ function preload(){
 
 function setup(){
 	createCanvas(AREA_WIDTH + CONFIG_WIDTH, AREA_HEIGHT);
-  colorMode(HSB, 100);
+  //colorMode(HSB, 100);
 	noStroke();
+	particlePool = new ObjectPool(() => { return new Particle(); }, 512);
   mySystem = new System();
   //ptn0();
 }
@@ -111,7 +123,7 @@ class Ball{
 
 class ColorBall extends Ball{
 	constructor(x, y, ballGraphic, paleGraphic, colorId){
-		super(x, y, ballGraphic, paleBallGraphic, colorId);
+		super(x, y, ballGraphic);
 		this.paleGraphic = paleGraphic;
 		this.colorId = colorId;
 		this.pale = false;
@@ -158,17 +170,18 @@ class System{
 		this.shooter = new BallShooter();
 		//this.colorId = 0;
 		this.ballKindId = 0;
-		this.ballGraphicArray = {}; // ボール画像. normalとpaleの2種類。
-		this.ballGraphicArray.normal = [];
-		this.ballGraphicArray.pale = [];
+		this.ballGraphic = {}; // ボール画像. normalとpaleの2種類。
+		this.ballGraphic.normal = [];
+		this.ballGraphic.pale = [];
 		// とりあえず現時点ではnormal8つとpale8つかな。iceBallにもpaleあるし。つまり9つまで。normalは12個までって感じかな。
 		for(let i = 0; i < 8; i++){
-			this.ballGraphicArray.normal.push(createBallGraphic(i));
-			this.ballGraphicArray.pale.push(createBallGraphic(i, 0.7)); // 0.7はpaleRatioでこれにより薄くなる感じ。
+			this.ballGraphic.normal.push(createBallGraphic(i));
+			this.ballGraphic.pale.push(createBallGraphic(i, 0.7)); // 0.7はpaleRatioでこれにより薄くなる感じ。
 		}
 		// 8, 9, 10, 11は今後・・
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
+		this.particles = new ParticleSystem();
   }
 	getModeId(){
 		return this.modeId;
@@ -237,7 +250,11 @@ class System{
 		// kind < 8の場合はColorBallだけどそれ以降はスイッチしたほうがいいかも？Colorならpale画像も必要だし。
 		//this.balls.push(new Ball(x, y, this.ballGraphicArray[this.colorId]));
 		// そのうちColorBallにしてpale画像も付与するけど今はこれでいい。
-		this.balls.push(new Ball(x, y, this.ballGraphicArray.normal[this.ballKindId]));
+
+		//this.balls.push(new Ball(x, y, this.ballGraphicArray.normal[this.ballKindId]));
+		const normalGraphic = this.ballGraphic.normal[this.ballKindId];
+		const paleGraphic = this.ballGraphic.pale[this.ballKindId];
+		this.balls.push(new ColorBall(x, y, normalGraphic, paleGraphic, this.ballKindId));
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールのidを返すがなければ-1を返す。
