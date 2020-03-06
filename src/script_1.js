@@ -22,6 +22,15 @@ p5.DisableFriendlyErrors = true;
 // 有難く使わせていただきたいと思います。感謝します！
 
 
+// 課題
+// オーバーヘッドの負荷が重いのをなんとかしたいのと
+// パーティクル出す、NearColorで星型でいいです。NearColorはあそこから取り出す。ボールの色。
+// アイスボール用の色はおいおい。ホワイトだっけあと。
+// とりあえずdelete時に出るようにするところまでやる（帰ったら）
+// ボール衝突時にもパーティクル出してみたい
+// 大きさの違うボール同士の衝突も実装してみたい
+// エネルギーが失われる衝突とか実装してみたい（反発係数を実装する）
+
 let mySystem;
 
 const AREA_WIDTH =  360;
@@ -847,7 +856,7 @@ class Particle{
 	constructor(x, y, particleHue){
 		this.center = {};
 	}
-	initialize(x, y, baseColor, drawFunction){
+	initialize(x, y, baseColor, drawFunction, sizeFactor){
 		this.center.x = x;
 		this.center.y = y;
 		this.direction = random(2 * PI);
@@ -855,10 +864,9 @@ class Particle{
 		this.life = PARTICLE_LIFE;
 		this.color = getNearColor(baseColor);
 		this.rotationAngle = random(2 * PI); // 回転の初期位相
-		this.radius = random(MIN_RADIUS, MAX_RADIUS); // 本体の半径
+		this.radius = random(MIN_RADIUS, MAX_RADIUS) * sizeFactor; // 本体の半径. 6～24がデフォで、大きさをsizeFactorで調整する。
 		this.alive = true;
 		this.drawFunction = drawFunction;
-		//console.log(this.z.r, this.z.g, this.z.b);
 	}
 	update(){
 		this.life--;
@@ -886,10 +894,10 @@ class ParticleSystem{
 	constructor(){
 		this.particleArray = new CrossReferenceArray();
 	}
-	createParticle(x, y, baseColor, drawFunction){
-		for(let i = 0; i < PARTICLE_NUM; i++){
+	createParticle(x, y, baseColor, drawFunction, particleNum, sizeFactor = 1.0){
+		for(let i = 0; i < particleNum; i++){
 			let ptc = particlePool.use();
-			ptc.initialize(x, y, baseColor, drawFunction);
+			ptc.initialize(x, y, baseColor, drawFunction, sizeFactor);
 			this.particleArray.add(ptc);
 		}
 	}
