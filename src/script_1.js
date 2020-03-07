@@ -363,12 +363,25 @@ class System{
 		_ball.kill();
   }
 	createParticleAtRemove(_ball){
+		const {x, y} = _ball.position;
 		switch(_ball.type){
 			case "color":
-			  this.particles.createParticle(_ball.position.x, _ball.position.y, [0, 2 * PI], color(COLOR_PALETTE[_ball.colorId]), drawStar, 20);
+			  this.particles.createParticle(x, y, [0, 2 * PI], color(COLOR_PALETTE[_ball.colorId]), drawStar, 20);
 				break;
 			case "ice":
-			  this.particles.createParticle(_ball.position.x, _ball.position.y, [0, 2 * PI], color(COLOR_PALETTE[9]), drawCross, 20);
+			  this.particles.createParticle(x, y, [0, 2 * PI], color(COLOR_PALETTE[9]), drawCross, 20);
+				break;
+		}
+	}
+	createParticleAtCollide(_ball){
+		const {x, y} = _ball.position;
+		switch(_ball.type){
+			case "color":
+			  this.particles.createParticle(x, y, [0, 2 * PI], color(COLOR_PALETTE[_ball.colorId]), drawTriangle, 5, 1.0, 0.5);
+				break;
+			case "ice":
+			  this.particles.createParticle(x, y, [0, 2 * PI], color(COLOR_PALETTE[9]), drawTriangle, 5, 1.0, 0.5);
+				break;
 		}
 	}
   update(){
@@ -382,6 +395,8 @@ class System{
   			const _other = this.balls[otherId];
   			if(!collisionCheck(_ball, _other)){ continue; }
   			perfectCollision(_ball, _other);
+				this.createParticleAtCollide(_ball);
+				this.createParticleAtCollide(_other);
 				_ball.hit(this, _other);
 				_other.hit(this, _ball);
   		}
