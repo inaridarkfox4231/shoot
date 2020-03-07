@@ -150,12 +150,9 @@ class ColorBall extends Ball{
 		//this.life = 180; // paleがtrueのとき減り続けて0になると消滅する
 	}
 	hit(_system, _other){
-		// アイスとぶつかっても何も起きない。
-		switch(_other.type){
-			case "color":
-			  // カラー同士の場合、色が同じなら発光する。おわり。
-			  if(_other.colorId === this.colorId){ this.pale = true; this.graphic = this.paleGraphic; }
-				break;
+		// カラー同士の場合、色が同じなら発光する。おわり。
+		if(_other.type === "color" && _other.colorId === this.colorId){
+			this.pale = true; this.graphic = this.paleGraphic;
 		}
 	}
 	update(){
@@ -174,7 +171,6 @@ class IceBall extends Ball{
 		this.type = "ice";
 		this.paleGraphic = paleGraphic;
 		this.pale = false;
-		this.life = 180;
 	}
 	hit(_system, _other){
 		// 相手が発光していれば発光する。発光しないサンダーとかは変化なし。
@@ -186,6 +182,22 @@ class IceBall extends Ball{
 		super.update();
 		if(this.pale && this.velocity.mag() === 0){ this.kill(); }
 		// lifeが0になったら排除。
+	}
+}
+
+// サンダーボールはカラーと当たるとそれと同じ色のカラーをすべて消して自分も消える。
+class ThunderBall extends Ball{
+	constructor(x, y, ballGraphic){
+		super(x, y, ballGraphic);
+		this.type = "thunder";
+	}
+	hit(_system, _other){
+		if(_other.type === "color"){
+			for(let _ball of _system.balls){
+				if(_ball.type === "color" && _ball.colorId === _other.colorId){ _ball.kill(); }
+			}
+			this.kill();
+		}
 	}
 }
 
