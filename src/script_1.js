@@ -61,7 +61,7 @@ const MIN_DISTANCE = 30; // 到達距離
 const MAX_DISTANCE = 60;
 const MIN_RADIUS = 6; // 大きさ
 const MAX_RADIUS = 24;
-const PARTICLE_NUM = 20; // 一度に出力する個数
+// const PARTICLE_NUM = 20; // 一度に出力する個数 → 廃止
 
 const prefix = "https://inaridarkfox4231.github.io/assets/shoot/";
 
@@ -365,10 +365,10 @@ class System{
 	createParticleAtRemove(_ball){
 		switch(_ball.type){
 			case "color":
-			  this.particles.createParticle(_ball.position.x, _ball.position.y, color(COLOR_PALETTE[_ball.colorId]), drawStar, 30);
+			  this.particles.createParticle(_ball.position.x, _ball.position.y, [0, 2 * PI], color(COLOR_PALETTE[_ball.colorId]), drawStar, 20);
 				break;
 			case "ice":
-			  this.particles.createParticle(_ball.position.x, _ball.position.y, color(COLOR_PALETTE[9]), drawCross, 30);
+			  this.particles.createParticle(_ball.position.x, _ball.position.y, [0, 2 * PI], color(COLOR_PALETTE[9]), drawCross, 20);
 		}
 	}
   update(){
@@ -1054,12 +1054,12 @@ class Particle{
 	constructor(x, y, particleHue){
 		this.center = {};
 	}
-	initialize(x, y, baseColor, drawFunction, sizeFactor){
+	initialize(x, y, direction, baseColor, drawFunction, lifeFactor, sizeFactor){
 		this.center.x = x;
 		this.center.y = y;
-		this.direction = random(2 * PI);
+		this.direction = direction; // 方向指定
 	  this.finalDistance = random(MIN_DISTANCE, MAX_DISTANCE);
-		this.life = PARTICLE_LIFE;
+		this.life = PARTICLE_LIFE * lifeFactor; // 寿命をlifeFactorで調整する。
 		this.color = getNearColor(baseColor);
 		this.rotationAngle = random(2 * PI); // 回転の初期位相
 		this.radius = random(MIN_RADIUS, MAX_RADIUS) * sizeFactor; // 本体の半径. 6～24がデフォで、大きさをsizeFactorで調整する。
@@ -1093,10 +1093,12 @@ class ParticleSystem{
 	constructor(){
 		this.particleArray = new CrossReferenceArray();
 	}
-	createParticle(x, y, baseColor, drawFunction, particleNum, sizeFactor = 1.0){
+	createParticle(x, y, directionRange, baseColor, drawFunction, particleNum, lifeFactor = 1.0, sizeFactor = 1.0){
 		for(let i = 0; i < particleNum; i++){
 			let ptc = particlePool.use();
-			ptc.initialize(x, y, baseColor, drawFunction, sizeFactor);
+			// 一応基本は[0, 2 * PI]で。特定方向に出す場合も考慮・・
+			const direction = random(directionRange[0], directionRange[1]);
+			ptc.initialize(x, y, direction, baseColor, drawFunction, lifeFactor, sizeFactor);
 			this.particleArray.add(ptc);
 		}
 	}
