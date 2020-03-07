@@ -154,7 +154,7 @@ class ColorBall extends Ball{
 		switch(_other.type){
 			case "color":
 			  // カラー同士の場合、色が同じなら発光する。おわり。
-			  if(_other.colorId === this.colorId){ this.pale = true; }
+			  if(_other.colorId === this.colorId){ this.pale = true; this.graphic = this.paleGraphic; }
 				break;
 		}
 	}
@@ -162,13 +162,6 @@ class ColorBall extends Ball{
 		super.update();
 		if(this.pale && this.velocity.mag() === 0){ this.kill(); }
 		// lifeが0のBallの排除はSystem側で行う。その際パーティクルを出したり、種類に応じてまあいろいろやる。
-	}
-	draw(){
-		if(this.pale){
-			image(this.paleGraphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
-		}else{
-			image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
-		}
 	}
 }
 
@@ -184,27 +177,15 @@ class IceBall extends Ball{
 		this.life = 180;
 	}
 	hit(_system, _other){
-		// 相手が発光していれば発光する。
-		switch(_other.type){
-			case "color":
-				if(_other.pale){ this.pale = true; }
-				break;
-			case "ice":
-				if(_other.pale){ this.pale = true; }
-				break;
+		// 相手が発光していれば発光する。発光しないサンダーとかは変化なし。
+		if((_other.type === "color" || _other.type === "ice") && _other.pale){
+			this.pale = true; this.graphic = this.paleGraphic;
 		}
 	}
 	update(){
 		super.update();
 		if(this.pale && this.velocity.mag() === 0){ this.kill(); }
 		// lifeが0になったら排除。
-	}
-	draw(){
-		if(this.pale){
-			image(this.paleGraphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
-		}else{
-			image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
-		}
 	}
 }
 
@@ -870,7 +851,7 @@ function createIceBallGraphic(paleRatio = 0.0){
 	gr.translate(r * 1.2, r * 1.2);
 	// baseColor.水色系。
 	const baseColor = lerpColor(color(0, 162, 232), color(255), paleRatio);
-	gr.fill(lerpColor(baseColor, color(255), 0.7));
+	gr.fill(lerpColor(baseColor, color(255), 0.4));
 	gr.circle(0, 0, r * 2);
 	gr.noFill();
 	for(let i = 0; i < 30; i++){
