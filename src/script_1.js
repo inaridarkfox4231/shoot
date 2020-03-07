@@ -260,7 +260,7 @@ class System{
 		const h = AREA_HEIGHT;
 		const r = BALL_RADIUS;
     // 背景選択用ボタン
-		this.boardButtons = new ButtonSet();
+		this.boardButtons = new UniqueButtonSet();
 		let atv = this.boardGraphic.active;
 		let inAtv = this.boardGraphic.inActive;
 		this.boardButtons.addNormalButton(w * 0.03, h * 0.21, w * 0.164, h * 0.08, atv[0], inAtv[0]);
@@ -273,7 +273,7 @@ class System{
 		// ballButtonsに改名。
 		let buttonColor = [];
 		for(let i = 0; i < COLOR_PALETTE.length; i++){ buttonColor.push(color(COLOR_PALETTE[i])); }
-		this.ballButtons = new ButtonSet();
+		this.ballButtons = new UniqueButtonSet();
 		this.ballButtons.addColorButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, buttonColor[0]);
 		this.ballButtons.addColorButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, buttonColor[1]);
 		this.ballButtons.addColorButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, buttonColor[2]);
@@ -287,7 +287,7 @@ class System{
 		this.ballButtons.addNormalButton(w * 0.02, h * 0.705, w * 0.225, h * 0.09, iceActive, iceNonActive);
 		this.ballButtons.initialize();
     // モードを変更する為のボタン
-		this.modeButtons = new ButtonSet();
+		this.modeButtons = new UniqueButtonSet();
 		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "ADD");
 		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "MOV");
 		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "DEL");
@@ -503,39 +503,76 @@ class NormalButton extends Button{
 class ButtonSet{
 	constructor(){
 		this.buttons = [];
-		this.activeButtonId = 0;
+		this.size = 0; // ボタンの個数
+		//this.activeButtonId = 0;
 	}
-	initialize(){
-		this.buttons[0].activate();
-	}
-	getActiveButtonId(){
-		return this.activeButtonId;
-	}
-	addColorButton(left, top, w, h, hue, innerText = ""){
+	initialize(){ /* 初期化 */ }
+	addColorButton(left, top, w, h, buttonColor, innerText = ""){
 		// ColorButtonを追加する
-		this.buttons.push(new ColorButton(left, top, w, h, hue, innerText));
+		this.buttons.push(new ColorButton(left, top, w, h, buttonColor, innerText));
+		this.size++;
 	}
 	addNormalButton(left, top, w, h, activeGraphic, inActiveGraphic){
 		// NormalButtonを追加する
 		this.buttons.push(new NormalButton(left, top, w, h, activeGraphic, inActiveGraphic));
+		this.size++;
 	}
-	activateButton(x, y){
-		// (x, y)がボタンをactivateさせるなら変更する。
-		this.buttons[this.activeButtonId].inActivate();
-		for(let i = 0; i < this.buttons.length; i++){
-			if(this.buttons[i].hit(x, y)){ this.activeButtonId = i; }
+	getTargetButtonId(x, y){
+		// (x, y)がボタンにヒットするならそれのidを返すがなければ-1を返す。
+    for(let i = 0; i < this.size; i++){
+			if(this.buttons[i].hit(x, y)){ return i; }
 		}
-		this.buttons[this.activeButtonId].activate();
+		return -1;
 	}
 	draw(gr){
+		// ボタンが多い場合に・・表示工夫したり必要なんかな。
 		for(let btn of this.buttons){ btn.draw(gr); }
 	}
 }
 
 // 一度にひとつのボタンしかアクティブにならないボタンセット
 class UniqueButtonSet extends ButtonSet{
+	constructor(initialActiveButtonId = 0){
+		super();
+		this.activeButtonId = initialActiveButtonId;  // 最初にアクティブになっているボタンのid（デフォは0）
+	}
+	initialize(){
+		this.buttons[this.activeButtonId].activate();
+	}
+	getActiveButtonId(){
+		// activeなボタンのidは一意なのでそれを返す。
+		return this.activeButtonId;
+	}
+	activateButton(x, y){
+    // (x, y)がボタンにヒットする場合に、それをactivateして、それ以外をinActivateする感じ。
+		const targetButtonId = this.getTargetButtonId(x, y);
+		if(targetButtonId < 0){ return; }
+    this.buttons[this.activeButtonId].inActivate();
+		this.activeButtonId = targetButtonId;
+		this.buttons[this.activeButtonId].activate();
+	}
+}
+
+// 一度に複数のボタンがアクティブになれるボタンセット
+// 使わないけどね（何で用意したの）
+class MultiButtonSet extends ButtonSet{
 	constructor(){
 		super();
+		this.activeState = [];
+	}
+	initialize(){
+		for(let i = 0; i < this.size; i++){ this.activeState.push(false); }
+	}
+	getActiveState(){
+		return this.activeState;
+	}
+	activateButton(x, y){
+		// (x, y)がヒットしたボタンのactiveを切り替える感じ。
+		const targetButtonId = this.getTargetButtonId(x, y);
+		if(targetButtonId < 0){ return; }
+		let btn = this.buttons[targetButtonId];
+		if(btn.active){ btn.inActivate(); }else{ btn.activate(); }
+		this.activeState[targetButtonId] = btn.active;
 	}
 }
 
