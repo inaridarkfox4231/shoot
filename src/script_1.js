@@ -271,24 +271,26 @@ class System{
 		this.boardButtons.initialize();
     // ボールの種類を選択する為のボタン
 		// ballButtonsに改名。
+		let buttonColor = [];
+		for(let i = 0; i < COLOR_PALETTE.length; i++){ buttonColor.push(color(COLOR_PALETTE[i])); }
 		this.ballButtons = new ButtonSet();
-		this.ballButtons.addColorButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, 0);
-		this.ballButtons.addColorButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, 1);
-		this.ballButtons.addColorButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, 2);
-		this.ballButtons.addColorButton(w * 0.755, h * 0.505, w * 0.225, h * 0.09, 3);
-		this.ballButtons.addColorButton(w * 0.02, h * 0.605, w * 0.225, h * 0.09, 4);
-		this.ballButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, 5);
-		this.ballButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, 6);
-		this.ballButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, 7);
+		this.ballButtons.addColorButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, buttonColor[0]);
+		this.ballButtons.addColorButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, buttonColor[1]);
+		this.ballButtons.addColorButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, buttonColor[2]);
+		this.ballButtons.addColorButton(w * 0.755, h * 0.505, w * 0.225, h * 0.09, buttonColor[3]);
+		this.ballButtons.addColorButton(w * 0.02, h * 0.605, w * 0.225, h * 0.09, buttonColor[4]);
+		this.ballButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, buttonColor[5]);
+		this.ballButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, buttonColor[6]);
+		this.ballButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, buttonColor[7]);
 		const iceActive = createIceButtonGraphic(r * 2.4, r * 2.4);
 		const iceNonActive = createIceButtonGraphic(r * 2.4, r * 2.4, 0.5);
 		this.ballButtons.addNormalButton(w * 0.02, h * 0.705, w * 0.225, h * 0.09, iceActive, iceNonActive);
 		this.ballButtons.initialize();
     // モードを変更する為のボタン
 		this.modeButtons = new ButtonSet();
-		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, 8, "ADD");
-		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, 8, "MOV");
-		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, 8, "DEL");
+		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "ADD");
+		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "MOV");
+		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "DEL");
 		this.modeButtons.initialize();
 	}
 	activateButton(){
@@ -462,11 +464,12 @@ class Button{
 // それぞれの画像を用意して持たせる。だからそこだけ変える。
 // 廃止しません。ごめんね！
 // あ、そうか、ColorButtonの定義を変えちゃえばいいんだ。constructorで作っちゃえばいい。その際paleRatioも指定しちゃおう。
+// colorIdやめてbuttonColorを渡すように仕様変更
 class ColorButton extends Button{
-	constructor(left, top, w, h, colorId, innerText = ""){
+	constructor(left, top, w, h, buttonColor, innerText = ""){
 		super(left, top, w, h);
-		this.activeGraphic = createColorButtonGraphic(w, h, colorId, 0.0, innerText);
-		this.inActiveGraphic = createColorButtonGraphic(w, h, colorId, 0.7, innerText);
+		this.activeGraphic = createColorButtonGraphic(w, h, buttonColor, 0.0, innerText);
+		this.inActiveGraphic = createColorButtonGraphic(w, h, buttonColor, 0.7, innerText);
 	}
 	draw(gr){
 		// 画像は大きさを変えずにそのまま使う（文字のサイズとか変わっちゃうのでサムネ方式では駄目）
@@ -496,6 +499,7 @@ class NormalButton extends Button{
 	}
 }
 
+// ボタンを集めただけ。配列。
 class ButtonSet{
 	constructor(){
 		this.buttons = [];
@@ -525,6 +529,13 @@ class ButtonSet{
 	}
 	draw(gr){
 		for(let btn of this.buttons){ btn.draw(gr); }
+	}
+}
+
+// 一度にひとつのボタンしかアクティブにならないボタンセット
+class UniqueButtonSet extends ButtonSet{
+	constructor(){
+		super();
 	}
 }
 
@@ -893,13 +904,15 @@ function createIceBallGraphic(paleRatio = 0.0){
 // ColorButtonの定義のところで作ります。アイスとかサンダーは別の関数で作ります。
 // モードとカラーボール選択はここで作りましょう。
 // HSBやめたから普通にlerpColorで作る。
-function createColorButtonGraphic(w, h, colorId, paleRatio = 0.0, innerText = ""){
+
+// colorIdやめてbuttonColorを渡すように仕様変更
+function createColorButtonGraphic(w, h, buttonColor, paleRatio = 0.0, innerText = ""){
   let gr = createGraphics(w, h);
 	gr.rectMode(CENTER);
 	gr.noStroke();
 	const edgeLength = min(w, h) * 0.1;
 	// paleRatioで未選択の場合に色が薄くなるようにする。
-  const baseColor = lerpColor(color(COLOR_PALETTE[colorId]), color(255), paleRatio);
+  const baseColor = lerpColor(buttonColor, color(255), paleRatio);
   // 薄い部分
 	gr.fill(lerpColor(baseColor, color(255), 0.3));
 	gr.rect(w / 2, h / 2, w, h);
