@@ -1,22 +1,14 @@
 p5.DisableFriendlyErrors = true;
 "use strict";
 
-// とりあえずどうする？？
-// いろんなバリエーションがあると思う。
-// パターン1:テストモード。
+// テストモード。
 // 自由にボールを追加、削除できるようにし、どのボールも引っ張って動かせるようにする。
 // その際、追加するボールの質量、摩擦係数、などをいじれるようにした方がいいかも。
-// 摩擦係数は0.005～0.045くらいで（適当）
-// 速さの下限は0.001～0.1くらいで動かしてみる。
+// って思ったけど気が向いたらでいいや。
 
-// パターン2:パターンモード
-// 動かせるのは薄い灰色の球1つだけにして、他の球に当ててなんか・・するみたいな・・。
-
-// 多分あれ、クリックした瞬間にボールのpositionが有効になって、そのあとのマウスベクトルとボールのpositionから
-// 移動方向と強さが計算されて矢印でビジュアライズされる仕組みになってる。で、マウスを離すとそれにより計算される速度がその瞬間に再設定
-// されるようですね。
-// colorModeをHSBにして、100でmassFactorを割って、重いほど暗くなるようにする（1.0～2.0）
-// そして、動かす場合には、saturationを70とかにしてわかりやすく！
+// そのうち手玉作ってそれ以外動かせないようにするか、
+// もしくは今背景変えてるところでモードを変えるとか？んー・・
+// 手玉しか動かせないならどこでマウスダウンしても矢印出た方がよさそう
 
 // ボールの衝突音をhttps://soundeffect-lab.info/sound/various/various3.htmlさんの効果音ラボから拝借しました。
 // 有難く使わせていただきたいと思います。感謝します！
@@ -25,18 +17,19 @@ p5.DisableFriendlyErrors = true;
 // 課題
 // オーバーヘッドの負荷が重いのをなんとかしたいのと
 // パーティクル出す、NearColorで星型でいいです。NearColorはあそこから取り出す。ボールの色。
-// アイスボール用の色はおいおい。ホワイトだっけあと。
-// とりあえずdelete時に出るようにするところまでやる（帰ったら）
-// ボール衝突時にもパーティクル出してみたい
+// パーティクルはhopプロパティがonのときにジャンプするようにしたい。
+// あと画像貼り付けでやりたいけどいいのかな（負荷が分からん）
+
 // 大きさの違うボール同士の衝突も実装してみたい
+// そこまではやる（再利用したいし）
 // エネルギーが失われる衝突とか実装してみたい（反発係数を実装する）
 
 let mySystem;
 
 const AREA_WIDTH =  360;
 const AREA_HEIGHT = AREA_WIDTH * 1.5;
-const BALL_RADIUS = AREA_WIDTH * 0.045; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
-const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.005; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
+const BALL_RADIUS = AREA_WIDTH * 0.048; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
+const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.001; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
 const FRICTION_COEFFICIENT = 0.02; // 摩擦の大きさ（0.01から0.02に上げてみた）
 const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）
 
@@ -107,6 +100,22 @@ class Ball{
 		this.velocity.set(speed * cos(direction), speed * sin(direction));
 	}
 	applyReflection(){
+		// 反射処理。
+		// positionAdjustmentは_ball, d, nにしたよ。だから、こうする。
+    /*
+		if(this.position.x < this.radius || this.position.x > AREA_WIDTH - this.radius){
+		  const collisionPlaneNormalVectorX = createVector(1, 0);
+			const distanceWithWall = (this.position.x < this.radius ? this.position.x : AREA_WIDTH - this.position.x);
+			positionAdjustment(this, distanceWithWall, collisionPlaneNormalVectorX);
+			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorX);
+		}else if(this.position.y < this.radius || this.position.y > AREA_HEIGHT - this.radius){
+			const collisionPlaneNormalVectorY = createVector(0, 1);
+			const distanceWithWall = (this.position.y < this.radius ? this.position.y : AREA_HEIGHT - this.position.y);
+			positionAdjustment(this, distanceWithWall, collisionPlaneNormalVectorY);
+			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorY);
+		}
+		*/
+
 		if(this.position.x < this.radius || this.position.x > AREA_WIDTH - this.radius){
 			const collisionPlaneNormalVectorX = createVector(1, 0);
 			const distanceWithWall = (this.position.x < this.radius ? this.position.x : AREA_WIDTH - this.position.x);
@@ -125,7 +134,7 @@ class Ball{
 	}
 	kill(){
 		this.alive = false;
-		//this.life = 0; // 強制的に殺す。・・これ使えばdeleteのところにあれこれ書く必要ないな・・。最後のremoveObjectsで消せるやん。
+		// 強制的に殺す。・・これ使えばdeleteのところにあれこれ書く必要ないな・・。最後のremoveObjectsで消せるやん。
 	}
 	hit(_system, _other){ /* 衝突した際のもろもろ。 */ }
 	update(){
@@ -139,8 +148,7 @@ class Ball{
 	}
 }
 
-// 動きが止まると消える？？
-// lifeは廃止かな・・
+// 同じ色のカラーボールに衝突した後、動きが止まると消える。
 class ColorBall extends Ball{
 	constructor(x, y, ballGraphic, paleGraphic, colorId){
 		super(x, y, ballGraphic);
@@ -148,7 +156,6 @@ class ColorBall extends Ball{
 		this.paleGraphic = paleGraphic;
 		this.colorId = colorId;
 		this.pale = false;
-		//this.life = 180; // paleがtrueのとき減り続けて0になると消滅する
 	}
 	hit(_system, _other){
 		// カラー同士の場合、色が同じなら発光する。おわり。
@@ -159,7 +166,7 @@ class ColorBall extends Ball{
 	update(){
 		super.update();
 		if(this.pale && this.velocity.mag() === 0){ this.kill(); }
-		// lifeが0のBallの排除はSystem側で行う。その際パーティクルを出したり、種類に応じてまあいろいろやる。
+		// lifeは廃止。aliveプロパティを使う。
 	}
 }
 
@@ -206,26 +213,15 @@ class ThunderBall extends Ball{
 // 消滅しない。残る。
 // class heavyball extends Ball{}
 
+// マジカルボールは衝突するとその種類のボールを同じ場所に出現させて自分は消える。
+// 位置と速度をコピー。
+
+// ライトアークボール、レフトアークボールはおいおい。進行方向がカーブする感じ・・
 
 // グラフィックはボールによってはいじるかもだけどそこらへんは個別に対応できるし上書きできるからOK.
 
-// 1.ColorBall. これは色のid情報をもつ。type:"color"で、同じ色と当たると発光したのち消滅する。
-// 2.IceBall. これはtype:"ice"でグラフィックは雪の結晶っぽいのがくるくるまわる。で、パーティクルも工夫する。
-// パーティクルは画像貼り付けでやりたい。いろいろ工夫できるようになるし。手裏剣と月を追加したい。
-// 発光したボールとあたると中央の結晶の色がその色になって（基本薄い水色っぽいの）、同じ色のColorBallと当たるとそれも発光する。
-// そのまま消滅。
-// 3.ThunderBall. type:"thunder". これはColorBallが衝突したら消滅してその瞬間に同じ色のColorBallがすべて消滅する。
-// 4.HeavyBall. type:"heavy". massFactorが2.0で摩擦係数も3倍の0.03にする。
-// 5.WhiteBall. type:"white". 手玉とwhite以外のボールが当たった場合に消滅してそのボールと同じ種類のボールを同じ場所に出現させる。
-// (Systemをhitで渡すからそれ使って直接生成する感じですかね・・)ちなみに位置と速度をコピーする。
-
-// ThunderはColorBallが当たったらlifeを0にする。そしてSystemにアクセスしてすべての同じ色のColorBallをkillする。（スパゲティになる・・）
-// スパゲティが嫌ならhitでSystemを渡すか、System側でThunderを排除するときに・・それやばいな。だめ。
-
-// 3, 4, 5は発光しないので、継承で書いた方がいいね・・
-// lifeを廃止してaliveにしてaliveがfalseのときに排除させる。
-
-// いわゆる「手玉」も継承で書くべきか・・ぬーん。
+// 手玉は継承で書く・・？衝突時のアクションが皆無だからBallでいいかも。
+// 穴に落ちて消えるにしてもそれを書くのはここじゃないでしょう。
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // System.
@@ -291,7 +287,7 @@ class System{
 		this.ballButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, buttonColor[5]);
 		this.ballButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, buttonColor[6]);
 		this.ballButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, buttonColor[7]);
-		//const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic, createHeavyBallGraphic, createMagicBallGraphic];
+		//const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic, createHeavyBallGraphic, createMagicalBallGraphic];
 		const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic];
 		let activeButtonGraphicArray = [];
 		let nonActiveButtonGraphicArray = [];
@@ -342,7 +338,6 @@ class System{
 		//this.balls.push(new Ball(x, y, this.ballGraphicArray[this.colorId]));
 		// そのうちColorBallにしてpale画像も付与するけど今はこれでいい。
 
-		//this.balls.push(new Ball(x, y, this.ballGraphicArray.normal[this.ballKindId]));
 		const normalGraphic = this.ballGraphic.normal[this.ballKindId];
 		const paleGraphic = this.ballGraphic.pale[this.ballKindId];
 		if(this.ballKindId < 8){
@@ -381,6 +376,7 @@ class System{
 		_ball.kill();
   }
 	createParticleAtRemove(_ball){
+		// ボールを排除するときのparticle出力
 		const {x, y} = _ball.position;
 		this.particles.setSizeFactor(1.0);
 		switch(_ball.type){
@@ -396,6 +392,7 @@ class System{
 		}
 	}
 	createParticleAtCollide(_ball){
+		// ボールが衝突するときのparticle出力
 		const {x, y} = _ball.position;
 		this.particles.setSizeFactor(0.5);
 		switch(_ball.type){
@@ -446,12 +443,11 @@ class System{
 		// ボタンをクラス化しました～
 		this.boardButtons.draw(gr);
 		this.modeButtons.draw(gr);
-		//this.colorButtons.draw(gr);
 		this.ballButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
 	removeObjects(){
-		// lifeが0になったボールの排除やパーティクルの排除などを行う。
+		// killされたボールの排除やパーティクルの排除などを行う。
 		for(let i = this.balls.length - 1; i >= 0; i--){
 			const _ball = this.balls[i];
 			if(!_ball.alive){
@@ -465,18 +461,13 @@ class System{
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Button.
+// 背景選択ボタン、ボール選択ボタン、モード選択ボタンの3種類。
 // ADD:ボールを追加する。
 // MOV:ボールを動かす。
 // DEL:ボールを削除する。
 
-// 提案なんだけどアニメーションつけないかい？
-// 30フレームくらいの。で、アニメーションが終わったらactivate, inActivateする
-// アニメーション中に他をクリックしちゃったらとかあるのでモードチェンジの際にアニメを切れるようにする。
-// まあもろもろ揃えてからでいいよ。
+// アニメ要らんわ
 
-// 色ボタンはテキストなしで。
-// サイズボタンは1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 3.5, 4.0の10種類。
-// モードボタンはADD, MOV, DELの3種類。
 class Button{
 	constructor(left, top, w, h){
 		this.left = left;
@@ -680,7 +671,14 @@ class BallShooter{
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Functions for collide.
+// 衝突関連の関数群。衝突判定や、反射時の速度計算、およびそれに基づくボール同士が衝突したときの速度計算など。
+// ボール同士の衝突は、まずそれぞれの速度から重心座標を割り出してそれに対する相対速度を抜き出し、
+// めり込みを計算して互いに接しているところまでそれらの相対速度に従ってボールを後退させ、
+// そのうえで新しくできた接触面に対して完全弾性衝突による反射を行い新たな速度とする。
+// もし反発係数を加味するのならここの部分で衝突面に垂直な速度成分を抜き出しそのうちの何%かの長さのベクトルで速度を引いてやる処理が必要。
+// 壁との反射も同様。
 
+// 半径を見て衝突判定。これは半径が異なっても普通に使える。
 function collisionCheck(_ball, _other){
   return p5.Vector.dist(_ball.position, _other.position) < _ball.radius + _other.radius;
 }
@@ -688,6 +686,12 @@ function collisionCheck(_ball, _other){
 // まずball.massFactorとball.velocityとotherのそれから重心のベクトルを出してそれを使って相対速度を作って
 // それに対して衝突面の法線ベクトル、これはpositionのsubを取るだけ。これで相対速度を反射させる。
 // 最後に重心ベクトルを足しなおせば完成（のはず）
+
+// distanceWithWallの計算で中心間の距離を2で割ってるけどここ半径が異なる場合には違う、円の交点を結ぶ直線がそれだと出ないので。
+// まあ大して複雑な計算じゃないけど。
+// あれ・・計算違う気がしてきたな・・相対速度の比が質量比だから・・これまずいなぁ。んー・・
+// 戻る距離が速度に比例するでしょ、軽い方がたくさん戻るから、これまずいねって。
+// 壁の場合と違って移動距離の合計を質量のファクターで分配するから、同じメソッドは使えなさそう。
 function perfectCollision(_ball, _other){
 	// ballとotherが衝突したときの速度の変化を記述する（面倒なので完全弾性衝突で）
 	// その前に、双方が下限速度の場合は何もしないこととする。
@@ -697,6 +701,24 @@ function perfectCollision(_ball, _other){
 	// 相対速度
 	let u = p5.Vector.sub(_ball.velocity, g);
 	let v = p5.Vector.sub(_other.velocity, g);
+
+  // ここまでOK.
+	// collisionPlaneNormalVectorの名称はやめて、fromOtherToBallとでもする（_otherから_ballへ）
+	// uとfromOtherToBallのなす角のcosと、fromOtherToBallの長さ(intiialDistance)と両者の半径の和(radiusSum)から
+	// 移動距離の総和(l=adjustDistanceSum)が出る、それを質量比で割って、それぞれの移動距離を出してu,vと同じ方向のベクトルでそういう大きさの
+	// 物を作ってsubすればOK.
+  /*
+	const fromOtherToBall = p5.Vector.sub(_ball.position, _other.position);
+	const initialDistance = fromOtherToBall.mag();
+	const c = p5.Vector.dot(u, fromOtherToBall) / (u.mag() * initialDistance);
+	const radiusSum = _ball.radius + _other.radius;
+	const adjustDistanceSum = initialDistance * c + sqrt(radiusSum * radiusSum - initialDistance * initialDistance * (1 - c * c));
+	const adjustDistanceForBall = adjustDistanceSum * _other.massFactor / (_ball.massFactor + _other.massFactor);
+	const adjustDistanceForOther = adjustDistanceSum * _ball.massFactor / (_ball.massFactor + _other.massFactor);
+	_ball.position.sub(p5.Vector.mult(u, adjustDistanceForBall / u.mag()));
+	_other.position.sub(p5.Vector.mult(v, adjustDistanceForOther / v.mag()));
+	*/
+
 	const collisionPlaneNormalVector = p5.Vector.sub(_ball.position, _other.position);
 	// ここに位置の調整を挟む
 	// 双方が接するように位置を後退させる、割と複雑な処理。
@@ -708,7 +730,9 @@ function perfectCollision(_ball, _other){
 	const adjustedDistance = distanceWithWall * (1 - c * c) + c * multiplier;
 	positionAdjustment(_ball.position, u, collisionPlaneNormalVector, distanceWithWall, adjustedDistance);
 	positionAdjustment(_other.position, v, collisionPlaneNormalVector, distanceWithWall, adjustedDistance);
-	// 位置が変わったので接触面の法線ベクトルを再計算しないといけない。
+
+
+	// 位置が変わったあとは同じように接触面のベクトルで反射処理するだけ。
   const newNormalVector = p5.Vector.sub(_ball.position, _other.position);
 	u = reflection(u, newNormalVector);
 	v = reflection(v, newNormalVector);
@@ -733,6 +757,19 @@ function getCenterVector(_ball, _other){
 
 // 衝突の場合は_ball.radiusではなくて、・・壁の場合はadjustedDistanceは普通に半径でいいんだけど、
 // 衝突では位置ずらした時に接していないといけなくってそこら辺でバグってるみたい。
+
+// もうこれは壁との反射でしか使わないので、普通にp, v, adjDist(radius)のところは_ball送っちゃっていいよ。
+// だから初期の壁との距離d, 結局_ballとdとnだけでいいね。nは壁に向かう方向でよろしく。
+// 壁に向かってる以上は必然的にcosは正になるけれど・・
+// だめ。absしないと。でないとたとえば右端と左端で違うベクトルが必要になってしまう。面倒くさい。同じ(1, 0)や(0, 1)を使いたい。
+/*
+function positionAdjustment(_ball, d, n){
+  // d:衝突時の壁との距離。n:壁に垂直に向かうベクトル。
+	const multiplier = (_ball.radius - d) * n.mag() / abs(p5.Vector.dot(_ball.velocity, n));
+	_ball.position.sub(p5.Vector.mult(_ball.velocity, multiplier));
+}
+*/
+
 function positionAdjustment(p, v, n, d, adjDist){
 	// d:distanceWithWall.
 	// 要するにめりこみ処理・・うまくいくか知らないけど。_ballの速度の情報を元に位置をずらす感じですかね。subで。
@@ -743,12 +780,19 @@ function positionAdjustment(p, v, n, d, adjDist){
 	// 大丈夫？？
 }
 
+// だから、このadjustmentも、戻る距離の総和を出したうえで、それを質量比で割って、それの分だけ戻さないと・・ねぇ。
+
+// 接触面が確定したら普通に反射処理を行う。
 function reflection(v, n){
 	// nは壁の法線ベクトル(normalVector)。これにより反射させる。
 	// nとして、v→v - 2(v・n)nという計算を行う。
 	// nが単位ベクトルでもいいように大きさの2乗（n・n）で割るか・・（collisionでも使うので）
 	return p5.Vector.sub(v, p5.Vector.mult(p5.Vector.mult(n, 2), p5.Vector.dot(v, n) / p5.Vector.dot(n, n)));
 }
+
+// 反射の仕様変更について。
+// 壁との反射は(r-d)/「ボールの速度および壁に向かうベクトルのなす角のcos」でいいよ。
+// ボール同士の衝突は例の計算でいいと思う。
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Interaction.
