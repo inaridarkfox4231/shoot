@@ -102,20 +102,20 @@ class Ball{
 	applyReflection(){
 		// 反射処理。
 		// positionAdjustmentは_ball, d, nにしたよ。だから、こうする。
-    /*
-		if(this.position.x < this.radius || this.position.x > AREA_WIDTH - this.radius){
-		  const collisionPlaneNormalVectorX = createVector(1, 0);
-			const distanceWithWall = (this.position.x < this.radius ? this.position.x : AREA_WIDTH - this.position.x);
-			positionAdjustment(this, distanceWithWall, collisionPlaneNormalVectorX);
-			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorX);
-		}else if(this.position.y < this.radius || this.position.y > AREA_HEIGHT - this.radius){
-			const collisionPlaneNormalVectorY = createVector(0, 1);
-			const distanceWithWall = (this.position.y < this.radius ? this.position.y : AREA_HEIGHT - this.position.y);
-			positionAdjustment(this, distanceWithWall, collisionPlaneNormalVectorY);
-			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorY);
-		}
-		*/
 
+		if(this.position.x < this.radius || this.position.x > AREA_WIDTH - this.radius){
+		  const normalVectorWithWallX = createVector(1, 0);
+			const distanceWithWall = (this.position.x < this.radius ? this.position.x : AREA_WIDTH - this.position.x);
+			positionAdjustment(this, distanceWithWall, normalVectorWithWallX);
+			this.velocity = reflection(this.velocity, normalVectorWithWallX);
+		}else if(this.position.y < this.radius || this.position.y > AREA_HEIGHT - this.radius){
+			const normalVectorWithWallY = createVector(0, 1);
+			const distanceWithWall = (this.position.y < this.radius ? this.position.y : AREA_HEIGHT - this.position.y);
+			positionAdjustment(this, distanceWithWall, normalVectorWithWallY);
+			this.velocity = reflection(this.velocity, normalVectorWithWallY);
+		}
+
+/*
 		if(this.position.x < this.radius || this.position.x > AREA_WIDTH - this.radius){
 			const collisionPlaneNormalVectorX = createVector(1, 0);
 			const distanceWithWall = (this.position.x < this.radius ? this.position.x : AREA_WIDTH - this.position.x);
@@ -127,6 +127,7 @@ class Ball{
 			positionAdjustment(this.position, this.velocity, collisionPlaneNormalVectorY, distanceWithWall, this.radius);
 			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorY);
 		}
+*/
 	}
 	applyFriction(){
 		// 摩擦を与える
@@ -707,7 +708,7 @@ function perfectCollision(_ball, _other){
 	// uとfromOtherToBallのなす角のcosと、fromOtherToBallの長さ(intiialDistance)と両者の半径の和(radiusSum)から
 	// 移動距離の総和(l=adjustDistanceSum)が出る、それを質量比で割って、それぞれの移動距離を出してu,vと同じ方向のベクトルでそういう大きさの
 	// 物を作ってsubすればOK.
-  /*
+
 	const fromOtherToBall = p5.Vector.sub(_ball.position, _other.position);
 	const initialDistance = fromOtherToBall.mag();
 	const c = p5.Vector.dot(u, fromOtherToBall) / (u.mag() * initialDistance);
@@ -717,20 +718,16 @@ function perfectCollision(_ball, _other){
 	const adjustDistanceForOther = adjustDistanceSum * _ball.massFactor / (_ball.massFactor + _other.massFactor);
 	_ball.position.sub(p5.Vector.mult(u, adjustDistanceForBall / u.mag()));
 	_other.position.sub(p5.Vector.mult(v, adjustDistanceForOther / v.mag()));
-	*/
 
+/*
 	const collisionPlaneNormalVector = p5.Vector.sub(_ball.position, _other.position);
-	// ここに位置の調整を挟む
-	// 双方が接するように位置を後退させる、割と複雑な処理。
-	// 具体的にはダブった時の中心同士の中点から中心を重心ベースの速度に沿って後退させて半径だけ離れたところまでもっていく感じ。そうすると接する。
 	const distanceWithWall = p5.Vector.dist(_ball.position, _other.position) / 2;
-	// どうもこのu.mag()が0になってるのがまずかったっぽい。
 	const c = abs(p5.Vector.dot(u, collisionPlaneNormalVector)) / (u.mag() * collisionPlaneNormalVector.mag());
 	const multiplier = sqrt(_ball.radius * _ball.radius - distanceWithWall * distanceWithWall * (1 - c * c));
 	const adjustedDistance = distanceWithWall * (1 - c * c) + c * multiplier;
 	positionAdjustment(_ball.position, u, collisionPlaneNormalVector, distanceWithWall, adjustedDistance);
 	positionAdjustment(_other.position, v, collisionPlaneNormalVector, distanceWithWall, adjustedDistance);
-
+*/
 
 	// 位置が変わったあとは同じように接触面のベクトルで反射処理するだけ。
   const newNormalVector = p5.Vector.sub(_ball.position, _other.position);
@@ -748,28 +745,22 @@ function getCenterVector(_ball, _other){
 	return p5.Vector.mult(p5.Vector.add(u, v), multiplier);
 }
 
-// distanceWithWallは壁との衝突の場合は壁に応じてそれとpositionの垂直距離、
-// 衝突の場合は相手とのpositionの差を2で割ったものとする。
-
 // どうもね、衝突の場合は重心座標系でやらないとだめっぽいね。
 // 当たり前といえば当たり前だ・・だって重心座標系にしたから壁の反射で計算できてるんでしょ。
 // だからそれ相応の速度を使わないとね・・。
-
-// 衝突の場合は_ball.radiusではなくて、・・壁の場合はadjustedDistanceは普通に半径でいいんだけど、
-// 衝突では位置ずらした時に接していないといけなくってそこら辺でバグってるみたい。
 
 // もうこれは壁との反射でしか使わないので、普通にp, v, adjDist(radius)のところは_ball送っちゃっていいよ。
 // だから初期の壁との距離d, 結局_ballとdとnだけでいいね。nは壁に向かう方向でよろしく。
 // 壁に向かってる以上は必然的にcosは正になるけれど・・
 // だめ。absしないと。でないとたとえば右端と左端で違うベクトルが必要になってしまう。面倒くさい。同じ(1, 0)や(0, 1)を使いたい。
-/*
-function positionAdjustment(_ball, d, n){
-  // d:衝突時の壁との距離。n:壁に垂直に向かうベクトル。
-	const multiplier = (_ball.radius - d) * n.mag() / abs(p5.Vector.dot(_ball.velocity, n));
+
+function positionAdjustment(_ball, distanceWithWall, normalVectorWithWall){
+  // distanceWithWall:衝突時の壁との距離。normalVectorWithWall:壁に垂直なベクトル（向きは自由）。
+	const multiplier = (_ball.radius - distanceWithWall) * normalVectorWithWall.mag() / abs(p5.Vector.dot(_ball.velocity, normalVectorWithWall));
 	_ball.position.sub(p5.Vector.mult(_ball.velocity, multiplier));
 }
-*/
 
+/*
 function positionAdjustment(p, v, n, d, adjDist){
 	// d:distanceWithWall.
 	// 要するにめりこみ処理・・うまくいくか知らないけど。_ballの速度の情報を元に位置をずらす感じですかね。subで。
@@ -779,6 +770,7 @@ function positionAdjustment(p, v, n, d, adjDist){
 	p.sub(p5.Vector.mult(v, multiplier));
 	// 大丈夫？？
 }
+*/
 
 // だから、このadjustmentも、戻る距離の総和を出したうえで、それを質量比で割って、それの分だけ戻さないと・・ねぇ。
 
