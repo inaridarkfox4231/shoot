@@ -46,7 +46,8 @@ const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 // ColorBallの色はパレットから出すことにしました。
 // 順に赤、オレンジ、黄色、緑、水色、青、紫、ピンク。その次は"#32cd32"（黄緑）でモード選択用。
 // 9番目としてアイスボールが消えるときの色。シアンにする。
-const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32", "#00a1e9"];
+// 10番目としてサンダーボールが消えるときの色。ゴールドにする。
+const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32", "#00a1e9", "#ffd700"];
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
@@ -201,6 +202,11 @@ class ThunderBall extends Ball{
 	}
 }
 
+// ヘビーボールはmassFactorが2.0で摩擦係数が1.5倍の0.3になってる。
+// 消滅しない。残る。
+// class heavyball extends Ball{}
+
+
 // グラフィックはボールによってはいじるかもだけどそこらへんは個別に対応できるし上書きできるからOK.
 
 // 1.ColorBall. これは色のid情報をもつ。type:"color"で、同じ色と当たると発光したのち消滅する。
@@ -246,6 +252,9 @@ class System{
 		// アイスボールのグラフィック
 		this.ballGraphic.normal.push(createIceBallGraphic());
 		this.ballGraphic.pale.push(createIceBallGraphic(0.5));
+		// サンダーボールのグラフィック
+		this.ballGraphic.normal.push(createThunderBallGraphic());
+		this.ballGraphic.pale.push(createThunderBallGraphic(0.5));
 		// 8, 9, 10, 11は今後・・
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
@@ -282,9 +291,16 @@ class System{
 		this.ballButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, buttonColor[5]);
 		this.ballButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, buttonColor[6]);
 		this.ballButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, buttonColor[7]);
-		const iceActive = createIceButtonGraphic(r * 2.4, r * 2.4);
-		const iceNonActive = createIceButtonGraphic(r * 2.4, r * 2.4, 0.5);
-		this.ballButtons.addNormalButton(w * 0.02, h * 0.705, w * 0.225, h * 0.09, iceActive, iceNonActive);
+		//const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic, createHeavyBallGraphic, createMagicBallGraphic];
+		const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic];
+		let activeButtonGraphicArray = [];
+		let nonActiveButtonGraphicArray = [];
+		for(const func of specialBallCreateFunctionArray){
+			activeButtonGraphicArray.push(createSpecialBallButtonGraphic(r * 2.4, r * 2.4, func));
+			nonActiveButtonGraphicArray.push(createSpecialBallButtonGraphic(r * 2.4, r * 2.4, func, 0.5));
+		}
+		this.ballButtons.addNormalButton(w * 0.02, h * 0.705, w * 0.225, h * 0.09, activeButtonGraphicArray[0], nonActiveButtonGraphicArray[0]);
+		this.ballButtons.addNormalButton(w * 0.265, h * 0.705, w * 0.225, h * 0.09, activeButtonGraphicArray[1], nonActiveButtonGraphicArray[1]);
 		this.ballButtons.initialize();
     // モードを変更する為のボタン
 		this.modeButtons = new UniqueButtonSet();
@@ -336,6 +352,8 @@ class System{
 			case 8:
 			  this.balls.push(new IceBall(x, y, normalGraphic, paleGraphic));
 				break;
+			case 9:
+			  this.balls.push(new ThunderBall(x, y, normalGraphic));
 		}
   }
   findBall(x, y){
@@ -372,6 +390,9 @@ class System{
 			case "ice":
 			  this.particles.createParticle(x, y, color(COLOR_PALETTE[9]), drawCross, 20);
 				break;
+			case "thunder":
+				this.particles.createParticle(x, y, color(COLOR_PALETTE[10]), drawCross, 20);
+				break;
 		}
 	}
 	createParticleAtCollide(_ball){
@@ -383,6 +404,9 @@ class System{
 				break;
 			case "ice":
 			  this.particles.createParticle(x, y, color(COLOR_PALETTE[9]), drawTriangle, 5);
+				break;
+			case "thunder":
+				this.particles.createParticle(x, y, color(COLOR_PALETTE[10]), drawTriangle, 5);
 				break;
 		}
 	}
@@ -906,6 +930,7 @@ function createBallGraphic(colorId, paleRatio = 0.0){
 	let gr = createGraphics(r * 2.4, r * 2.4);
 	gr.noStroke();
 	gr.translate(r * 1.2, r * 1.2);
+
 	const ballColor = color(COLOR_PALETTE[colorId]);
 	// 中心が白くなるグラデーションをかける。
 	for(let i = 0; i < 100; i++){
@@ -913,6 +938,7 @@ function createBallGraphic(colorId, paleRatio = 0.0){
 		gr.fill(lerpColor(ballColor, color(255), paleRatio + (1 - paleRatio) * prg));
 		gr.circle(0, 0, 2 * r * (1 - i / 100));
 	}
+
 	return gr;
 }
 
@@ -926,6 +952,7 @@ function createIceBallGraphic(paleRatio = 0.0){
   let gr = createGraphics(r * 2.4, r * 2.4);
 	gr.noStroke();
 	gr.translate(r * 1.2, r * 1.2);
+
 	// baseColor.水色系。
 	const baseColor = lerpColor(color(0, 162, 232), color(255), paleRatio);
 	gr.fill(lerpColor(baseColor, color(255), 0.4));
@@ -951,6 +978,37 @@ function createIceBallGraphic(paleRatio = 0.0){
 	for(let k = 0; k < 6; k++){
 		gr.quad(p[k].x, p[k].y, p[k + 12].x, p[k + 12].y, p[k + 6].x, p[k + 6].y, p[k + 18].x, p[k + 18].y);
 	}
+
+	return gr;
+}
+
+// サンダーボール作るよ
+function createThunderBallGraphic(paleRatio = 0.0){
+	// オレンジ系、中央に稲妻。
+	// オレンジ、中央に稲妻。
+  const r = BALL_RADIUS;
+
+	let gr = createGraphics(r * 2.4, r * 2.4);
+  gr.noStroke();
+	gr.translate(r * 1.2, r * 1.2);
+
+	const baseColor = lerpColor(color(255, 144, 0), color(255), paleRatio);
+	gr.fill(lerpColor(baseColor, color(255), 0.4));
+	gr.circle(0, 0, r * 2);
+	gr.noFill();
+	for(let i = 0; i < 30; i++){
+		let prg = i / 30;
+		prg = pow(prg, 2);
+		gr.stroke(lerpColor(baseColor, color(255), prg));
+		gr.strokeWeight(r * 0.4 / 30);
+		gr.arc(0, 0, r * (2 - 0.8 * prg), r * (2 - 0.8 * prg), 0, 2 * PI);
+	}
+	gr.noStroke();
+	// 稲妻を二つの三角形で表現。
+	gr.fill(baseColor);
+	gr.triangle(-r * 0.1, 0, -r * 0.2, r * 0.8, r * 0.4, 0);
+	gr.triangle(r * 0.1, 0, r * 0.2, -r * 0.8, -r * 0.4, 0);
+
 	return gr;
 }
 
@@ -987,13 +1045,14 @@ function createColorButtonGraphic(w, h, buttonColor, paleRatio = 0.0, innerText 
 
 // 特殊なボール選択のためのボタングラフィック。
 // アイス限定ではなく汎用にした方がいいに決まってるのでそうする。
-function createIceButtonGraphic(w, h, paleRatio = 0.0){
+// スペシャルボールボタングラフィック。
+function createSpecialBallButtonGraphic(w, h, createFunction, paleRatio = 0.0){
 	let gr = createGraphics(w, h);
-	const baseColor = lerpColor(color(0, 162, 232), color(255), paleRatio);
+	const baseColor = lerpColor(color(64), color(255), paleRatio);
 	gr.noStroke();
 	gr.fill(lerpColor(baseColor, color(255), 0.3));
 	gr.rect(0, 0, w, h);
-	const iceBallGraphic = createIceBallGraphic(paleRatio);
+	const iceBallGraphic = createFunction(paleRatio);
 	const t = min(w, h);
 	const r = BALL_RADIUS;
 	gr.image(iceBallGraphic, w/2 - t/2, h/2 - t/2, t, t, 0, 0, r * 2.4, r * 2.4);
@@ -1110,7 +1169,7 @@ class Particle{
 class ParticleSystem{
 	constructor(){
 		this.particleArray = new CrossReferenceArray();
-		this.directionRange = [0, 2 * PI];
+		this.directionRange = [0, 2 * PI]; // ここをいじると色んな方向にとびだす
 		this.lifeFactor = 1.0;
 		this.sizeFactor = 1.0;
 		this.hop = false; // particleが放物線を描くかどうか。デフォはまっすぐ。
