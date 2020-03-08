@@ -41,6 +41,9 @@ const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 // 9番目としてアイスボールが消えるときの色。シアンにする。
 // 10番目としてサンダーボールが消えるときの色。ゴールドにする。
 const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32", "#00a1e9", "#ffd700"];
+// たとえば色によってサイズを変えるのであれば
+// const SIZE_FACTOR = [1.0, 1.2, 1.4, 1.6, 1.8, etc...]
+// とかしてその値を使うことになるかな・・
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
 const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
@@ -102,7 +105,6 @@ class Ball{
 	applyReflection(){
 		// 反射処理。
 		// positionAdjustmentは_ball, d, nにしたよ。だから、こうする。
-
 		if(this.position.x < this.radius || this.position.x > AREA_WIDTH - this.radius){
 		  const normalVectorWithWallX = createVector(1, 0);
 			const distanceWithWall = (this.position.x < this.radius ? this.position.x : AREA_WIDTH - this.position.x);
@@ -114,20 +116,6 @@ class Ball{
 			positionAdjustment(this, distanceWithWall, normalVectorWithWallY);
 			this.velocity = reflection(this.velocity, normalVectorWithWallY);
 		}
-
-/*
-		if(this.position.x < this.radius || this.position.x > AREA_WIDTH - this.radius){
-			const collisionPlaneNormalVectorX = createVector(1, 0);
-			const distanceWithWall = (this.position.x < this.radius ? this.position.x : AREA_WIDTH - this.position.x);
-			positionAdjustment(this.position, this.velocity, collisionPlaneNormalVectorX, distanceWithWall, this.radius);
-			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorX);
-		}else if(this.position.y < this.radius || this.position.y > AREA_HEIGHT - this.radius){
-			const collisionPlaneNormalVectorY = createVector(0, 1);
-			const distanceWithWall = (this.position.y < this.radius ? this.position.y : AREA_HEIGHT - this.position.y);
-			positionAdjustment(this.position, this.velocity, collisionPlaneNormalVectorY, distanceWithWall, this.radius);
-			this.velocity = reflection(this.velocity, collisionPlaneNormalVectorY);
-		}
-*/
 	}
 	applyFriction(){
 		// 摩擦を与える
@@ -324,10 +312,13 @@ class System{
 		if(this.balls.length > BALL_CAPACITY){ return false; }
 		// (x, y)の位置を中心とするある程度の半径のボールが出現させられるかどうか。
 		// 具体的には既存のボールと位置が一定以上かぶらないこと、さらに壁にめり込まないことが条件。trueかfalseを返すbool値の関数。
+
+		// もしballKindにより半径が異なるのであればここは「BALL_RADIUS * 2」でなく「b.radius + 個々の半径」とでもするべき。
     for(let b of this.balls){
 			if(dist(b.position.x, b.position.y, x, y) < BALL_RADIUS * 2 + BALL_APPEAR_MARGIN){ return false; }
 		}
 		// これ別やん・・壁の近くには置けないようにする
+		// ここもBALL_RADIUSの代わりに個々の半径を使うことになるね。
 		if(x < BALL_RADIUS + BALL_APPEAR_MARGIN || x > AREA_WIDTH - BALL_RADIUS - BALL_APPEAR_MARGIN){ return false; }
 		if(y < BALL_RADIUS + BALL_APPEAR_MARGIN || y > AREA_HEIGHT - BALL_RADIUS - BALL_APPEAR_MARGIN){ return false; }
 		// もろもろ潜り抜けたらOK.
@@ -713,21 +704,12 @@ function perfectCollision(_ball, _other){
 	const initialDistance = fromOtherToBall.mag();
 	const c = p5.Vector.dot(u, fromOtherToBall) / (u.mag() * initialDistance);
 	const radiusSum = _ball.radius + _other.radius;
+
 	const adjustDistanceSum = initialDistance * c + sqrt(radiusSum * radiusSum - initialDistance * initialDistance * (1 - c * c));
 	const adjustDistanceForBall = adjustDistanceSum * _other.massFactor / (_ball.massFactor + _other.massFactor);
 	const adjustDistanceForOther = adjustDistanceSum * _ball.massFactor / (_ball.massFactor + _other.massFactor);
 	_ball.position.sub(p5.Vector.mult(u, adjustDistanceForBall / u.mag()));
 	_other.position.sub(p5.Vector.mult(v, adjustDistanceForOther / v.mag()));
-
-/*
-	const collisionPlaneNormalVector = p5.Vector.sub(_ball.position, _other.position);
-	const distanceWithWall = p5.Vector.dist(_ball.position, _other.position) / 2;
-	const c = abs(p5.Vector.dot(u, collisionPlaneNormalVector)) / (u.mag() * collisionPlaneNormalVector.mag());
-	const multiplier = sqrt(_ball.radius * _ball.radius - distanceWithWall * distanceWithWall * (1 - c * c));
-	const adjustedDistance = distanceWithWall * (1 - c * c) + c * multiplier;
-	positionAdjustment(_ball.position, u, collisionPlaneNormalVector, distanceWithWall, adjustedDistance);
-	positionAdjustment(_other.position, v, collisionPlaneNormalVector, distanceWithWall, adjustedDistance);
-*/
 
 	// 位置が変わったあとは同じように接触面のベクトルで反射処理するだけ。
   const newNormalVector = p5.Vector.sub(_ball.position, _other.position);
@@ -738,6 +720,7 @@ function perfectCollision(_ball, _other){
 	collideSound.play();
 }
 
+// 重心座標を得るために重心ベクトルを計算する
 function getCenterVector(_ball, _other){
   const multiplier = 1 / (_ball.massFactor + _other.massFactor);
 	const u = p5.Vector.mult(_ball.velocity, _ball.massFactor);
@@ -760,18 +743,6 @@ function positionAdjustment(_ball, distanceWithWall, normalVectorWithWall){
 	_ball.position.sub(p5.Vector.mult(_ball.velocity, multiplier));
 }
 
-/*
-function positionAdjustment(p, v, n, d, adjDist){
-	// d:distanceWithWall.
-	// 要するにめりこみ処理・・うまくいくか知らないけど。_ballの速度の情報を元に位置をずらす感じですかね。subで。
-	// 計算によると長さが(radius - distanceWithWall)x|v||n|/|(v・n)|で方向はvと同じ。
-	// だから計算上は_ballのvに(r-d)*|n|/|(v・n)|を掛ける形になる。可読性は落ちるけど。
-	const multiplier = (adjDist - d) * n.mag() / abs(p5.Vector.dot(v, n));
-	p.sub(p5.Vector.mult(v, multiplier));
-	// 大丈夫？？
-}
-*/
-
 // だから、このadjustmentも、戻る距離の総和を出したうえで、それを質量比で割って、それの分だけ戻さないと・・ねぇ。
 
 // 接触面が確定したら普通に反射処理を行う。
@@ -781,6 +752,19 @@ function reflection(v, n){
 	// nが単位ベクトルでもいいように大きさの2乗（n・n）で割るか・・（collisionでも使うので）
 	return p5.Vector.sub(v, p5.Vector.mult(p5.Vector.mult(n, 2), p5.Vector.dot(v, n) / p5.Vector.dot(n, n)));
 }
+// 反発についてはこの「2」を「1 + restitution」にする。FALさんのあれに出てきた。restitution coefficient（反発係数）だ。
+// 1で完全弾性衝突（今の場合）。1より小さくすれば反発で垂直方向の速度は削られる。たとえば0.95とかにするとかね。
+// ボール同士でも同じメソッドを使うから一緒だけどまあない方が軌道予測しやすいからいいかもね・・んー。
+// 逆に1.05とかにすればぼよ～んってなるから面白いよね。
+// 動かないボールとか用意して当たるとぼよ～んしちゃうとか？ボールにfixプロパティを設けてfixがあると・・
+// fixはmassFactor=infinityとして実現できる。比でしか使われてないから、つまりそういうこと。
+
+// 片方が固定の場合のperfectCollisionについて考えていた。
+// gが_ballと_otherのうちfixedでない方になるのでuかvは0になるわけだね。gの計算でfixedを考慮した場合分けしないと。
+// fixed同士はぶつかりようがないからそこはいい。
+// お邪魔ブロックってフリーランに出てくるからね・・それを実装したいっていう。
+// cの計算がまずい。uとvのうち0でないほうを取らなければならない。
+// radiusSumからinitialDistanceだけ引いた分、fixedでない方を戻せばいいので複雑な計算は要らない。あとは一緒。要するにボールを壁だと思って反射するだけ。
 
 // 反射の仕様変更について。
 // 壁との反射は(r-d)/「ボールの速度および壁に向かうベクトルのなす角のcos」でいいよ。
@@ -1359,3 +1343,5 @@ function getNearColor(baseColor){
 // 接するところまで戻す。で、そのうえで接触面を計算して、反射させるんだね（複雑・・）
 
 // 多分接するところまで戻せたはず。さて、本題に入るんだが・・（気力）
+
+// めり込む処理間違ってたので修正しました。正しいかどうかはcollision部分を抜き出して別のプログラムを作る必要がありそうです。おわり。
