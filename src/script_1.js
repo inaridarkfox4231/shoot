@@ -364,23 +364,25 @@ class System{
   }
 	createParticleAtRemove(_ball){
 		const {x, y} = _ball.position;
+		this.particles.setSizeFactor(1.0);
 		switch(_ball.type){
 			case "color":
-			  this.particles.createParticle(x, y, [0, 2 * PI], color(COLOR_PALETTE[_ball.colorId]), drawStar, 20);
+			  this.particles.createParticle(x, y, color(COLOR_PALETTE[_ball.colorId]), drawStar, 20);
 				break;
 			case "ice":
-			  this.particles.createParticle(x, y, [0, 2 * PI], color(COLOR_PALETTE[9]), drawCross, 20);
+			  this.particles.createParticle(x, y, color(COLOR_PALETTE[9]), drawCross, 20);
 				break;
 		}
 	}
 	createParticleAtCollide(_ball){
 		const {x, y} = _ball.position;
+		this.particles.setSizeFactor(0.5);
 		switch(_ball.type){
 			case "color":
-			  this.particles.createParticle(x, y, [0, 2 * PI], color(COLOR_PALETTE[_ball.colorId]), drawTriangle, 5, 1.0, 0.5);
+			  this.particles.createParticle(x, y, color(COLOR_PALETTE[_ball.colorId]), drawTriangle, 5);
 				break;
 			case "ice":
-			  this.particles.createParticle(x, y, [0, 2 * PI], color(COLOR_PALETTE[9]), drawTriangle, 5, 1.0, 0.5);
+			  this.particles.createParticle(x, y, color(COLOR_PALETTE[9]), drawTriangle, 5);
 				break;
 		}
 	}
@@ -983,7 +985,8 @@ function createColorButtonGraphic(w, h, buttonColor, paleRatio = 0.0, innerText 
 	return gr;
 }
 
-// アイスボール用グラフィック。
+// 特殊なボール選択のためのボタングラフィック。
+// アイス限定ではなく汎用にした方がいいに決まってるのでそうする。
 function createIceButtonGraphic(w, h, paleRatio = 0.0){
 	let gr = createGraphics(w, h);
 	const baseColor = lerpColor(color(0, 162, 232), color(255), paleRatio);
@@ -1107,15 +1110,35 @@ class Particle{
 class ParticleSystem{
 	constructor(){
 		this.particleArray = new CrossReferenceArray();
+		this.directionRange = [0, 2 * PI];
+		this.lifeFactor = 1.0;
+		this.sizeFactor = 1.0;
+		this.hop = false; // particleが放物線を描くかどうか。デフォはまっすぐ。
 	}
-	createParticle(x, y, directionRange, baseColor, drawFunction, particleNum, lifeFactor = 1.0, sizeFactor = 1.0){
+	createParticle(x, y, baseColor, drawFunction, particleNum){
 		for(let i = 0; i < particleNum; i++){
 			let ptc = particlePool.use();
 			// 一応基本は[0, 2 * PI]で。特定方向に出す場合も考慮・・
-			const direction = random(directionRange[0], directionRange[1]);
-			ptc.initialize(x, y, direction, baseColor, drawFunction, lifeFactor, sizeFactor);
+			const direction = random(this.directionRange[0], this.directionRange[1]);
+			ptc.initialize(x, y, direction, baseColor, drawFunction, this.lifeFactor, this.sizeFactor);
 			this.particleArray.add(ptc);
 		}
+	}
+	setDirectionRange(rangeArray){
+		this.directionRange = rangeArray;
+		return this;
+	}
+	setLifeFactor(lifeFactor){
+		this.lifeFactor = lifeFactor;
+		return this;
+	}
+	setSizeFactor(sizeFactor){
+		this.sizeFactor = sizeFactor;
+		return this;
+	}
+	setHop(flag){
+		this.hop = flag;
+		return this;
 	}
 	update(){
 		this.particleArray.loop("update");
