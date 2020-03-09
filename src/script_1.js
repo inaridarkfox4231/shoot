@@ -145,8 +145,8 @@ class Ball{
 
 // 同じ色のカラーボールに衝突した後、動きが止まると消える。
 class ColorBall extends Ball{
-	constructor(x, y, ballGraphic, paleGraphic, colorId){
-		super(x, y, ballGraphic);
+	constructor(x, y, ballGraphic, sizeFactor, paleGraphic, colorId){
+		super(x, y, ballGraphic, sizeFactor);
 		this.type = "color";
 		this.paleGraphic = paleGraphic;
 		this.colorId = colorId;
@@ -169,8 +169,8 @@ class ColorBall extends Ball{
 // あと今気付いたけど動きが止まると消えるみたい。
 // Thunderとかは発光しないで消滅するから不要よね。
 class IceBall extends Ball{
-	constructor(x, y, ballGraphic, paleGraphic){
-		super(x, y, ballGraphic);
+	constructor(x, y, ballGraphic, sizeFactor, paleGraphic){
+		super(x, y, ballGraphic, sizeFactor);
 		this.type = "ice";
 		this.paleGraphic = paleGraphic;
 		this.pale = false;
@@ -190,8 +190,8 @@ class IceBall extends Ball{
 
 // サンダーボールはカラーと当たるとそれと同じ色のカラーをすべて消して自分も消える。
 class ThunderBall extends Ball{
-	constructor(x, y, ballGraphic){
-		super(x, y, ballGraphic);
+	constructor(x, y, ballGraphic, sizeFactor){
+		super(x, y, ballGraphic, sizeFactor);
 		this.type = "thunder";
 	}
 	hit(_system, _other){
@@ -377,14 +377,14 @@ class System{
 		const normalGraphic = this.ballGraphic.normal[this.ballKindId];
 		const paleGraphic = this.ballGraphic.pale[this.ballKindId];
 		if(this.ballKindId < 8){
-		  this.balls.push(new ColorBall(x, y, normalGraphic, paleGraphic, this.ballKindId));
+		  this.balls.push(new ColorBall(x, y, normalGraphic, this.ballSizeFactor, paleGraphic, this.ballKindId));
 		}
 		switch(this.ballKindId){
 			case 8:
-			  this.balls.push(new IceBall(x, y, normalGraphic, paleGraphic));
+			  this.balls.push(new IceBall(x, y, normalGraphic, this.ballSizeFactor, paleGraphic));
 				break;
 			case 9:
-			  this.balls.push(new ThunderBall(x, y, normalGraphic));
+			  this.balls.push(new ThunderBall(x, y, normalGraphic, this.ballSizeFactor));
 		}
   }
   findBall(x, y){
@@ -447,6 +447,7 @@ class System{
 	}
   update(){
 		this.sizeChangeSlider.update();
+		this.ballSizeFactor = this.sizeChangeSlider.getValue();
     for(let b of this.balls){ b.update(); }
 		this.particles.update(); // particleのupdate.
   }

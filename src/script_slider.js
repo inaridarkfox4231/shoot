@@ -22,7 +22,7 @@ function setup(){
   mySlider1.initialize(0, 0);
   myCursor2 = new Cursor("circle", {r:15}, 1.1, color(0, 162, 232));
   mySlider2 = new LineSlider(0, 100, myCursor2, createVector(100, 100), createVector(300, 300));
-  mySlider2.initialize();
+  mySlider2.initialize(0, 0);
 }
 
 function draw(){
