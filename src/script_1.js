@@ -1159,7 +1159,7 @@ class Particle{
 		this.direction = direction; // 方向指定
 	  this.finalDistance = random(MIN_DISTANCE, MAX_DISTANCE);
 		this.life = PARTICLE_LIFE; // 寿命は固定しよう。
-		this.color = getNearColor(baseColor);
+		this.color = baseColor;
 		this.rotationAngle = random(2 * PI); // 回転の初期位相
 		this.radius = random(MIN_RADIUS, MAX_RADIUS) * sizeFactor; // 本体の半径. 6～24がデフォで、大きさをsizeFactorで調整する。
 		this.alive = true;
@@ -1320,16 +1320,7 @@ class CrossReferenceArray extends Array{
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Utility.
-// 色関連など
-
-function getNearColor(baseColor){
-	// baseColorに近い色を返す。
-	const r = constrain(red(baseColor) + random(-50, 50), 0, 255);
-	const g = constrain(green(baseColor) + random(-50, 50), 0, 255);
-	const b = constrain(blue(baseColor) + random(-50, 50), 0, 255);
-	//return {r:floor(r), g:floor(g), b:floor(b)};
-	return color(floor(r), floor(g), floor(b));
-}
+// NearColor廃止。なんか用意するかは未定。
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Pattern.
