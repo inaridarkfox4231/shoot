@@ -109,18 +109,12 @@ class Cursor{
     this.graphic = this.createCursorGraphic();
   }
   createCursorGraphic(){
-    let gr = createGraphics(this.offSetX * 2.0, this.offSetY * 2.0);
     // とりあえず単純に（あとできちんとやる）
-    gr.noStroke();
     switch(this.type){
       case "rect":
-        gr.fill(255, 0, 0);
-        gr.rect(0, 0, this.param.w, this.param.h);
-        break;
+        return createRectCursorGraphic(this.param.w, this.param.h);
       case "circle":
-        gr.fill(0, 0, 255);
-        gr.circle(this.param.r, this.param.r, this.param.r * 2.0);
-        break;
+        return createCircleCursorGraphic(this.param.r);
     }
     return gr;
   }
@@ -149,4 +143,32 @@ function mousePressed(){
 function mouseReleased(){
   mySlider1.inActivate();
   mySlider2.inActivate();
+}
+
+function createRectCursorGraphic(w, h){
+  let gr = createGraphics(w, h);
+  gr.noStroke();
+  const edgeSize = min(w, h) * 0.1;
+  const bodyColor = color(237, 28, 36);
+  gr.fill(lerpColor(bodyColor, color(255), 0.4));
+  gr.rect(0, 0, w, h);
+  gr.fill(lerpColor(bodyColor, color(0), 0.4));
+  gr.rect(edgeSize, edgeSize, w - edgeSize, h - edgeSize);
+  for(let i = 0; i < 50; i++){
+    gr.fill(lerpColor(bodyColor, color(255), 0.5 * (i / 50)));
+    gr.rect(edgeSize + (w/2 - edgeSize) * (i / 50), edgeSize + (h/2 - edgeSize) * (i / 50),
+            (w - 2 * edgeSize) * (1 - i / 50), (h - 2 * edgeSize) * (1 - i / 50));
+  }
+  return gr;
+}
+
+function createCircleCursorGraphic(r){
+  let gr = createGraphics(r * 2, r * 2);
+  gr.noStroke();
+  const bodyColor = color(0, 162, 232);
+  for(let i = 0; i < 50; i++){
+    gr.fill(lerpColor(bodyColor, color(255), 0.5 * (i / 50)));
+    gr.circle(r, r, 2 * r * (1 - i / 50));
+  }
+  return gr;
 }
