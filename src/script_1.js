@@ -414,7 +414,7 @@ class System{
 	createParticleAtRemove(_ball){
 		// ボールを排除するときのparticle出力
 		const {x, y} = _ball.position;
-		this.particles.setSizeFactor(1.0);
+		this.particles.setSizeFactor(_ball.radius / BALL_RADIUS); // 半径に応じて大きさを変える
 		this.particles.setHop(true);
 		switch(_ball.type){
 			case "color":
@@ -428,10 +428,12 @@ class System{
 				break;
 		}
 	}
-	createParticleAtCollide(_ball){
+	createParticleAtCollide(_ball, collidePoint){
 		// ボールが衝突するときのparticle出力
-		const {x, y} = _ball.position;
-		this.particles.setSizeFactor(0.5);
+		// 発生ポイントを衝突時の接点にしたいのでそこだけ修正。
+		//const {x, y} = _ball.position;
+		const {x, y} = collidePoint;
+		this.particles.setSizeFactor(_ball.radius * 0.5 / BALL_RADIUS); // リムーブ時の半分
 		this.particles.setHop(true);
 		switch(_ball.type){
 			case "color":
@@ -458,8 +460,13 @@ class System{
   			const _other = this.balls[otherId];
   			if(!collisionCheck(_ball, _other)){ continue; }
   			perfectCollision(_ball, _other);
-				this.createParticleAtCollide(_ball);
-				this.createParticleAtCollide(_other);
+				// この時接しているので接点作るのは簡単。
+				const radiusRatio = _ball.radius / (_ball.radius + _other.radius);
+				const collidePoint = {};
+				collidePoint.x = _ball.position.x * (1 - radiusRatio) + _other.position.x * radiusRatio;
+				collidePoint.y = _ball.position.y * (1 - radiusRatio) + _other.position.y * radiusRatio;
+				this.createParticleAtCollide(_ball, collidePoint);
+				this.createParticleAtCollide(_other, collidePoint);
 				_ball.hit(this, _other);
 				_other.hit(this, _ball);
   		}
