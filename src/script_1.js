@@ -234,6 +234,8 @@ class System{
 		this.ballKindId = 0;
 		this.ballSizeFactor = 1.0; // サイズ変えてみたい
     this.createBallGraphics();
+		// ボールのサイズ調整用
+    this.createSizeChangeSlider();
 		// コンフィグ関連
 		this.modeId = 0;
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
@@ -264,19 +266,30 @@ class System{
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
 	}
+	createSizeChangeSlider(){
+		// サイズ変更用のカーソルとスライダーを作る。
+		const w = CONFIG_WIDTH;
+		const h = AREA_HEIGHT;
+    const sizeChangeCursor = new Cursor("rect", {w:w * 0.05, h:h * 0.04}, 1.1, color(64));
+		this.sizeChangeSlider = new LineSlider(1.0, 2.5, sizeChangeCursor, createVector(w * 0.05, h * 0.225), createVector(w * 0.95, h * 0.225));
+		// 初期化時にコンフィグエリアの左上の座標をわたす。
+		this.sizeChangeSlider.initialize(AREA_WIDTH, 0);
+	}
 	createButtons(){
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
 		const r = BALL_RADIUS;
     // 背景選択用ボタン
 		this.boardButtons = new UniqueButtonSet();
-		let atv = this.boardGraphic.active;
-		let inAtv = this.boardGraphic.inActive;
-		this.boardButtons.addNormalButton(w * 0.03, h * 0.21, w * 0.164, h * 0.08, atv[0], inAtv[0]);
-		this.boardButtons.addNormalButton(w * 0.224, h * 0.21, w * 0.164, h * 0.08, atv[1], inAtv[1]);
-		this.boardButtons.addNormalButton(w * 0.438, h * 0.21, w * 0.164, h * 0.08, atv[2], inAtv[2]);
-		this.boardButtons.addNormalButton(w * 0.632, h * 0.21, w * 0.164, h * 0.08, atv[3], inAtv[3]);
-		this.boardButtons.addNormalButton(w * 0.826, h * 0.21, w * 0.164, h * 0.08, atv[4], inAtv[4]);
+		const atv = this.boardGraphic.active;
+		const inAtv = this.boardGraphic.inActive;
+		const boardButtonWidth = w * 0.164;
+		const boardButtonHeight = h * 0.08;
+		this.boardButtons.addNormalButton(w * 0.03, h * 0.26, boardButtonWidth, boardButtonHeight, atv[0], inAtv[0]);
+		this.boardButtons.addNormalButton(w * 0.224, h * 0.26, boardButtonWidth, boardButtonHeight, atv[1], inAtv[1]);
+		this.boardButtons.addNormalButton(w * 0.438, h * 0.26, boardButtonWidth, boardButtonHeight, atv[2], inAtv[2]);
+		this.boardButtons.addNormalButton(w * 0.632, h * 0.26, boardButtonWidth, boardButtonHeight, atv[3], inAtv[3]);
+		this.boardButtons.addNormalButton(w * 0.826, h * 0.26, boardButtonWidth, boardButtonHeight, atv[4], inAtv[4]);
 		this.boardButtons.initialize();
     // ボールの種類を選択する為のボタン
 		// ballButtonsに改名。
@@ -309,9 +322,11 @@ class System{
 		this.ballButtons.initialize();
     // モードを変更する為のボタン
 		this.modeButtons = new UniqueButtonSet();
-		this.modeButtons.addColorButton(w * 0.025, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "ADD");
-		this.modeButtons.addColorButton(w * 0.35, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "MOV");
-		this.modeButtons.addColorButton(w * 0.675, h * 0.9, w * 0.3, h * 0.08, buttonColor[8], "DEL");
+		const modeButtonWidth = w * 0.3;
+		const modeButtonHeight = h * 0.08;
+		this.modeButtons.addColorButton(w * 0.025, h * 0.9, modeButtonWidth, modeButtonHeight, buttonColor[8], "ADD");
+		this.modeButtons.addColorButton(w * 0.35, h * 0.9, modeButtonWidth, modeButtonHeight, buttonColor[8], "MOV");
+		this.modeButtons.addColorButton(w * 0.675, h * 0.9, modeButtonWidth, modeButtonHeight, buttonColor[8], "DEL");
 		this.modeButtons.initialize();
 	}
 	activateButton(){
@@ -326,6 +341,12 @@ class System{
 		this.modeId = this.modeButtons.getActiveButtonId();
 		this.ballButtons.activateButton(x, y);
 		this.ballKindId = this.ballButtons.getActiveButtonId();
+	}
+	activateSlider(){
+		this.sizeChangeSlider.activate();
+	}
+	inActivateSlider(){
+		this.sizeChangeSlider.inActivate();
 	}
 	addBallCheck(x, y){
 		// ある程度のマージンを持たせて密着しないようにする。
@@ -425,6 +446,7 @@ class System{
 		}
 	}
   update(){
+		this.sizeChangeSlider.update();
     for(let b of this.balls){ b.update(); }
 		this.particles.update(); // particleのupdate.
   }
@@ -455,6 +477,14 @@ class System{
 		gr.background(70);
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
+		// 先にボールサイズ用のエリア(h * 0.0～h * 2.5のところ)
+		// 最初にw * 0.3, h * 1.0のところに出現させるボールを表示する。
+		gr.image(this.ballGraphic.normal[this.ballKindId],
+			       w * 0.5 - BALL_RADIUS * this.ballSizeFactor * 1.2, h * 0.1 - BALL_RADIUS * this.ballSizeFactor * 1.2,
+						 BALL_RADIUS * this.ballSizeFactor * 2.4, BALL_RADIUS * this.ballSizeFactor * 2.4,
+					   0, 0, ORIGIN_BALL_RADIUS * 2.4, ORIGIN_BALL_RADIUS * 2.4);
+		// スライダーの描画。
+    this.sizeChangeSlider.draw(gr);
 		// 全部同じ色でいいよ。茶色かなんかで。で、違うときは暗くする。
 		// これでいいんだけど、今まで通りのこの方法だとマウスクリックとの紐付けが非常に面倒なので、何とかしたいです。
 		// ボタンをクラス化しました～
@@ -797,53 +827,6 @@ function reflection(v, n){
 // 反射の仕様変更について。
 // 壁との反射は(r-d)/「ボールの速度および壁に向かうベクトルのなす角のcos」でいいよ。
 // ボール同士の衝突は例の計算でいいと思う。
-
-// -------------------------------------------------------------------------------------------------------------------- //
-// Interaction.
-// 追加モードで何もないところをクリックした場合、他のボールと衝突しないようなら（壁にめり込んでもダメ）ボールを発生させることができる。
-// 移動モードでボールをクリックするとボールと紐付けされてボール位置からマウス位置に向かって矢印が出る、
-// ボールと重ねた状態でリリースするとキャンセル、リリースすると矢印の方向に飛ぶ。
-// 削除モードの時にクリックするとボールがなければ空振り、あればそれを排除する。
-// 設定する速さはMAX30位、矢印の長さはAREA_WIDTHの半分まで伸びる感じで。色は黒系で長いほど濃くなるイメージで。
-
-// MOVE, 面倒なのでボール位置からマウス位置に向かわせる。
-function mousePressed(){
-	const x = mouseX;
-	const y = mouseY;
-	mySystem.activateButton();
-	// 各種色変え、重さ替えなど。色変えは普通にパレット。重さ替えは灰色のグラデーションで数字書いてね。
-	if(x > AREA_WIDTH){ return; }
-	switch(mySystem.getModeId()){
-		case 0:
-		  /* ADD */
-			if(mySystem.addBallCheck(x, y)){ mySystem.addBall(x, y); }
-			break;
-		case 1:
-		  /* MOVE */
-			const shootingBall = mySystem.findBall(x, y);
-			//if(shootingBall !== undefined){ mySystem.setShootingBall(shootingBall); }
-			if(shootingBall){ mySystem.setShootingBall(shootingBall); }
-			break;
-		case 2:
-		  /* DELETE */
-			const deletingBall = mySystem.findBall(x, y);
-			//if(deletingBall !== undefined){ mySystem.deleteBall(deletingBall); }
-			if(deletingBall){ mySystem.deleteBall(deletingBall); }
-			break;
-	}
-  return false;
-}
-
-
-function mouseReleased(){
-	switch(mySystem.getModeId()){
-		case 1:
-		  /* MOVE */
-			mySystem.shootBall();
-			break;
-	}
-  return false;
-}
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Graphics.
@@ -1345,6 +1328,214 @@ class CrossReferenceArray extends Array{
 		this.length = 0;
 	}
 }
+
+// ---------------------------------------------------------------------------------------- //
+// Cursor and Slider.
+// サイズ変更用のカーソルとスライダー。
+
+// 使い方。
+// 先にカーソルをサイズや形、色指定して生成する。
+// それを元にスライダーを生成。形状はとりあえず直線が用意してある。
+// mousePressedでactivateしてmouseReleasedでinActivateするだけ。
+// 使う前にinitializeでカーソルの位置を調整するの忘れずに。
+// 値の取得はgetValueでminとmaxの値に応じて返されるのでそれを使って何でもできる。
+// 気になるなら値の取得をmouseIsPressedの間だけにすればいい。以上。
+
+// コンフィグエリアが指定されてその上に描画することが多いと思うのでそういう前提で書いてる・・悪しからず。
+
+// offSetX, offSetYのプロパティを追加。コンフィグエリアの位置情報がないとhitをきちんと実行できない。
+
+// スライダー。
+class Slider{
+  constructor(minValue, maxValue, cursor){
+    this.minValue = minValue;
+    this.maxValue = maxValue;
+    this.cursor = cursor;
+    this.active = false;
+  }
+  initialize(offSetX, offSetY){
+    /* カーソルの初期位置を決める */
+    // offSetX, offSetYはスライダーを置くエリアのleftとtopに当たるポイント。hitのところであれする。
+    this.offSetX = offSetX;
+    this.offSetY = offSetY;
+  }
+  activate(){
+    // マウス位置がカーソルにヒットしなければactiveにしない。
+    if(!this.cursor.hit(mouseX - this.offSetX, mouseY - this.offSetY)){ return; }
+    this.active = true;
+  }
+  inActivate(){
+    this.active = false;
+  }
+  getValue(){ /* カーソルの位置と自身のレールデータから値を取り出す処理。形状による。 */ }
+  update(){ /* activeであればmouseIsPressedである限りカーソルの位置を更新し続ける */ }
+  draw(gr){ /* レールの形状がスライダーによるのでここには何も書けない */ }
+}
+
+// startとendは位置ベクトルで、それぞれがminとmaxに対応する。
+class LineSlider extends Slider{
+  constructor(minValue, maxValue, cursor, start, end){
+    super(minValue, maxValue, cursor);
+    this.start = start;
+    this.end = end;
+    this.length = p5.Vector.dist(start, end);
+    this.lineWeight = 3.0;
+  }
+  initialize(offSetX, offSetY){
+    super.initialize(offSetX, offSetY);
+    // start位置におく。
+    this.cursor.setPosition(this.start.x, this.start.y);
+  }
+  getValue(){
+    // cursorのpositionのstartとendに対する相対位置の割合(prg)からvalueを割り出す。
+    const prg = p5.Vector.dist(this.start, this.cursor.position) / this.length;
+    return this.minValue * (1 - prg) + this.maxValue * prg;
+  }
+  update(){
+    if(!this.active){ return; }
+    // マウス位置から垂線を下ろしてratioを割り出す。ratioはconstrainで0以上1以下に落とす。
+    const mousePosition = createVector(mouseX - this.offSetX, mouseY - this.offSetY);
+    let ratio = p5.Vector.dot(p5.Vector.sub(this.start, this.end), p5.Vector.sub(this.start, mousePosition)) / pow(this.length, 2);
+    ratio = constrain(ratio, 0, 1);
+    const newPos = p5.Vector.add(p5.Vector.mult(this.start, 1 - ratio), p5.Vector.mult(this.end, ratio));
+    this.cursor.setPosition(newPos.x, newPos.y);
+  }
+  draw(gr){
+    gr.stroke(0);
+    gr.strokeWeight(this.lineWeight);
+    gr.line(this.start.x, this.start.y, this.end.x, this.end.y);
+    gr.noStroke();
+    this.cursor.draw(gr);
+  }
+}
+// カーソル。
+class Cursor{
+  constructor(type, param, marginFactor = 1.0, cursorColor = color(0)){
+    this.type = type;
+    this.position = createVector();
+    this.param = param;
+    this.marginFactor = marginFactor; // マウスダウン位置がカーソルの当たり判定からはみ出していても大丈夫なように。
+    // たとえば1.1なら|x-mouseX|<(w/2)*1.1までOKとかそういうの。円形なら・・分かるよね。
+    this.cursorColor = cursorColor; // カーソルの色。
+    // offSetXとoffSetYは中心からgraphicの描画位置までの距離。
+    switch(type){
+      case "rect":
+        this.offSetX = param.w * 0.5;
+        this.offSetY = param.h * 0.5;
+        break;
+      case "circle":
+        this.offSetX = param.r;
+        this.offSetY = param.r;
+        break;
+    }
+    this.graphic = this.createCursorGraphic();
+  }
+  createCursorGraphic(){
+    // とりあえず単純に（あとできちんとやる）
+    switch(this.type){
+      case "rect":
+        return createRectCursorGraphic(this.param.w, this.param.h, this.cursorColor);
+      case "circle":
+        return createCircleCursorGraphic(this.param.r, this.cursorColor);
+    }
+    return gr;
+  }
+  setPosition(x, y){
+    this.position.set(x, y);
+  }
+  hit(x, y){
+    const {x:px, y:py} = this.position;
+    switch(this.type){
+      case "rect":
+        return abs(x - px) < this.param.w * 0.5 * this.marginFactor && abs(y - py) < this.param.h * 0.5 * this.marginFactor;
+      case "circle":
+        return pow(x - px, 2) + pow(y - py, 2) < pow(this.param.r * this.marginFactor, 2);
+    }
+  }
+  draw(gr){
+    gr.image(this.graphic, this.position.x - this.offSetX, this.position.y - this.offSetY);
+  }
+}
+
+// RectCursorの描画用
+function createRectCursorGraphic(w, h, cursorColor){
+  let gr = createGraphics(w, h);
+  gr.noStroke();
+  const edgeSize = min(w, h) * 0.1;
+  const bodyColor = cursorColor;
+  gr.fill(lerpColor(bodyColor, color(255), 0.4));
+  gr.rect(0, 0, w, h);
+  gr.fill(lerpColor(bodyColor, color(0), 0.4));
+  gr.rect(edgeSize, edgeSize, w - edgeSize, h - edgeSize);
+  for(let i = 0; i < 50; i++){
+    gr.fill(lerpColor(bodyColor, color(255), 0.5 * (i / 50)));
+    gr.rect(edgeSize + (w/2 - edgeSize) * (i / 50), edgeSize + (h/2 - edgeSize) * (i / 50),
+            (w - 2 * edgeSize) * (1 - i / 50), (h - 2 * edgeSize) * (1 - i / 50));
+  }
+  return gr;
+}
+
+// CircleCursorの描画用
+function createCircleCursorGraphic(r, cursorColor){
+  let gr = createGraphics(r * 2, r * 2);
+  gr.noStroke();
+  const bodyColor = cursorColor;
+  for(let i = 0; i < 50; i++){
+    gr.fill(lerpColor(bodyColor, color(255), 0.5 * (i / 50)));
+    gr.circle(r, r, 2 * r * (1 - i / 50));
+  }
+  return gr;
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// Interaction.
+// 追加モードで何もないところをクリックした場合、他のボールと衝突しないようなら（壁にめり込んでもダメ）ボールを発生させることができる。
+// 移動モードでボールをクリックするとボールと紐付けされてボール位置からマウス位置に向かって矢印が出る、
+// ボールと重ねた状態でリリースするとキャンセル、リリースすると矢印の方向に飛ぶ。
+// 削除モードの時にクリックするとボールがなければ空振り、あればそれを排除する。
+// 設定する速さはMAX30位、矢印の長さはAREA_WIDTHの半分まで伸びる感じで。色は黒系で長いほど濃くなるイメージで。
+
+// MOVE, 面倒なのでボール位置からマウス位置に向かわせる。
+function mousePressed(){
+	const x = mouseX;
+	const y = mouseY;
+	mySystem.activateButton();
+	mySystem.activateSlider();
+	// 各種色変え、重さ替えなど。色変えは普通にパレット。重さ替えは灰色のグラデーションで数字書いてね。
+	if(x > AREA_WIDTH){ return; }
+	switch(mySystem.getModeId()){
+		case 0:
+		  /* ADD */
+			if(mySystem.addBallCheck(x, y)){ mySystem.addBall(x, y); }
+			break;
+		case 1:
+		  /* MOVE */
+			const shootingBall = mySystem.findBall(x, y);
+			//if(shootingBall !== undefined){ mySystem.setShootingBall(shootingBall); }
+			if(shootingBall){ mySystem.setShootingBall(shootingBall); }
+			break;
+		case 2:
+		  /* DELETE */
+			const deletingBall = mySystem.findBall(x, y);
+			//if(deletingBall !== undefined){ mySystem.deleteBall(deletingBall); }
+			if(deletingBall){ mySystem.deleteBall(deletingBall); }
+			break;
+	}
+  return false;
+}
+
+
+function mouseReleased(){
+	mySystem.inActivateSlider();
+	switch(mySystem.getModeId()){
+		case 1:
+		  /* MOVE */
+			mySystem.shootBall();
+			break;
+	}
+  return false;
+}
+
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Utility.
