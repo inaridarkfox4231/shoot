@@ -371,6 +371,7 @@ class System{
 		// ボールを排除するときのparticle出力
 		const {x, y} = _ball.position;
 		this.particles.setSizeFactor(1.0);
+		this.particles.setHop(true);
 		switch(_ball.type){
 			case "color":
 			  this.particles.createParticle(x, y, color(COLOR_PALETTE[_ball.colorId]), drawStar, 20);
@@ -387,6 +388,7 @@ class System{
 		// ボールが衝突するときのparticle出力
 		const {x, y} = _ball.position;
 		this.particles.setSizeFactor(0.5);
+		this.particles.setHop(true);
 		switch(_ball.type){
 			case "color":
 			  this.particles.createParticle(x, y, color(COLOR_PALETTE[_ball.colorId]), drawTriangle, 5);
@@ -1151,17 +1153,18 @@ class Particle{
 	constructor(x, y, particleHue){
 		this.center = {};
 	}
-	initialize(x, y, direction, baseColor, drawFunction, lifeFactor, sizeFactor){
+	initialize(x, y, direction, baseColor, drawFunction, sizeFactor, hopFlag){
 		this.center.x = x;
 		this.center.y = y;
 		this.direction = direction; // 方向指定
 	  this.finalDistance = random(MIN_DISTANCE, MAX_DISTANCE);
-		this.life = PARTICLE_LIFE * lifeFactor; // 寿命をlifeFactorで調整する。
+		this.life = PARTICLE_LIFE; // 寿命は固定しよう。
 		this.color = getNearColor(baseColor);
 		this.rotationAngle = random(2 * PI); // 回転の初期位相
 		this.radius = random(MIN_RADIUS, MAX_RADIUS) * sizeFactor; // 本体の半径. 6～24がデフォで、大きさをsizeFactorで調整する。
 		this.alive = true;
 		this.drawFunction = drawFunction;
+		this.hop = hopFlag;
 	}
 	update(){
 		this.life--;
@@ -1173,8 +1176,12 @@ class Particle{
 		prg = sqrt(prg * (2 - prg));
 		//const particleColor = color(this.colorData.r, this.colorData.g, this.colorData.b, 255 * (1 - prg));
 		this.color.setAlpha(255 * (1 - prg));
-		const x = this.center.x + this.finalDistance * prg * cos(this.direction);
-		const y = this.center.y + this.finalDistance * prg * sin(this.direction);
+		let x = this.center.x + this.finalDistance * prg * cos(this.direction);
+		let y = this.center.y + this.finalDistance * prg * sin(this.direction);
+		if(this.hop){
+			// ぽ～ん効果
+			y -= prg * (1 - prg) * 4.0 * this.finalDistance * 0.5;
+		}
     this.drawFunction(x, y, this.radius, this.rotationAngle, this.color);
 	}
 	remove(){
@@ -1190,7 +1197,7 @@ class ParticleSystem{
 	constructor(){
 		this.particleArray = new CrossReferenceArray();
 		this.directionRange = [0, 2 * PI]; // ここをいじると色んな方向にとびだす
-		this.lifeFactor = 1.0;
+		//this.lifeFactor = 1.0;
 		this.sizeFactor = 1.0;
 		this.hop = false; // particleが放物線を描くかどうか。デフォはまっすぐ。
 	}
@@ -1199,16 +1206,12 @@ class ParticleSystem{
 			let ptc = particlePool.use();
 			// 一応基本は[0, 2 * PI]で。特定方向に出す場合も考慮・・
 			const direction = random(this.directionRange[0], this.directionRange[1]);
-			ptc.initialize(x, y, direction, baseColor, drawFunction, this.lifeFactor, this.sizeFactor);
+			ptc.initialize(x, y, direction, baseColor, drawFunction, this.sizeFactor, this.hop);
 			this.particleArray.add(ptc);
 		}
 	}
 	setDirectionRange(rangeArray){
 		this.directionRange = rangeArray;
-		return this;
-	}
-	setLifeFactor(lifeFactor){
-		this.lifeFactor = lifeFactor;
 		return this;
 	}
 	setSizeFactor(sizeFactor){
