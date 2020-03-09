@@ -28,6 +28,9 @@ let mySystem;
 
 const AREA_WIDTH =  360;
 const AREA_HEIGHT = AREA_WIDTH * 1.5;
+
+const ORIGIN_BALL_RADIUS = 100; // 画像用の半径。これを元にボール画像を作って、個別の描画ではこれを渡して適切に拡縮して使う。
+
 const BALL_RADIUS = AREA_WIDTH * 0.048; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
 const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.001; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
 const FRICTION_COEFFICIENT = 0.02; // 摩擦の大きさ（0.01から0.02に上げてみた）
@@ -90,10 +93,10 @@ function draw(){
 
 // こっちをmassFactorとballGraphicにしてそれぞれ登録する。drawはballGraphicを当てはめる形。
 class Ball{
-	constructor(x, y, ballGraphic){
+	constructor(x, y, ballGraphic, sizeFactor = 1.0){
 		this.position = createVector(x, y);
 		this.velocity = createVector(0, 0);
-		this.radius = BALL_RADIUS;
+		this.radius = BALL_RADIUS * sizeFactor; // sizeFactorだけ大きくなる。MAXで2.5の予定。
 		this.friction = FRICTION_COEFFICIENT;
 		this.massFactor = 1.0; // デフォルト1.0で統一。特別なクラスの場合に上書きする。
 		this.graphic = ballGraphic;
@@ -133,7 +136,10 @@ class Ball{
 		if(this.velocity.mag() < SPEED_LOWER_LIMIT){ this.velocity.set(0, 0); } // 速さの下限に達したら0にする。
 	}
 	draw(){
-		image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2);
+		// 240x240の元画像を拡縮
+		image(this.graphic, this.position.x - this.radius * 1.2, this.position.y - this.radius * 1.2,
+		                    this.radius * 2.4, this.radius * 2.4,
+											  0, 0, ORIGIN_BALL_RADIUS * 2.4, ORIGIN_BALL_RADIUS * 2.4);
 	}
 }
 
@@ -217,37 +223,46 @@ class ThunderBall extends Ball{
 
 class System{
   constructor(){
-    this.balls = [];
-		this.modeId = 0;
+		// 背景
 		this.boardId = 0;
 		this.boardGraphic = createBoardGraphic(); // 背景工夫したいねって
+		// ボール
+    this.balls = [];
+		// ボール動かす用
+		this.shooter = new BallShooter();
+		// ボールの種類関連
+		this.ballKindId = 0;
+		this.ballSizeFactor = 1.0; // サイズ変えてみたい
+    this.createBallGraphics();
+		// コンフィグ関連
+		this.modeId = 0;
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
 	  this.createButtons();
-		this.shooter = new BallShooter();
-		//this.colorId = 0;
-		this.ballKindId = 0;
-		this.ballGraphic = {}; // ボール画像. normalとpaleの2種類。
+		// パーティクル関連
+		this.particles = new ParticleSystem();
+  }
+	getModeId(){
+		return this.modeId;
+	}
+	createBallGraphics(){
+		// ボール画像. normalとpaleの2種類。
+		this.ballGraphic = {};
 		this.ballGraphic.normal = [];
 		this.ballGraphic.pale = [];
 		// とりあえず現時点ではnormal8つとpale8つかな。iceBallにもpaleあるし。つまり9つまで。normalは12個までって感じかな。
 		for(let i = 0; i < 8; i++){
-			this.ballGraphic.normal.push(createBallGraphic(i));
-			this.ballGraphic.pale.push(createBallGraphic(i, 0.7)); // 0.7はpaleRatioでこれにより薄くなる感じ。
+			this.ballGraphic.normal.push(createColorBallGraphic(i));
+			this.ballGraphic.pale.push(createColorBallGraphic(i, 0.7)); // 0.7はpaleRatioでこれにより薄くなる感じ。
 		}
-		// アイスボールのグラフィック
+		// アイスボールのグラフィック(8)
 		this.ballGraphic.normal.push(createIceBallGraphic());
 		this.ballGraphic.pale.push(createIceBallGraphic(0.5));
-		// サンダーボールのグラフィック
+		// サンダーボールのグラフィック(9)
 		this.ballGraphic.normal.push(createThunderBallGraphic());
 		this.ballGraphic.pale.push(createThunderBallGraphic(0.5));
 		// 8, 9, 10, 11は今後・・
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
-		// 次に、パーティクルシステム。
-		this.particles = new ParticleSystem();
-  }
-	getModeId(){
-		return this.modeId;
 	}
 	createButtons(){
 		const w = CONFIG_WIDTH;
@@ -268,24 +283,29 @@ class System{
 		let buttonColor = [];
 		for(let i = 0; i < COLOR_PALETTE.length; i++){ buttonColor.push(color(COLOR_PALETTE[i])); }
 		this.ballButtons = new UniqueButtonSet();
-		this.ballButtons.addColorButton(w * 0.02, h * 0.505, w * 0.225, h * 0.09, buttonColor[0]);
-		this.ballButtons.addColorButton(w * 0.265, h * 0.505, w * 0.225, h * 0.09, buttonColor[1]);
-		this.ballButtons.addColorButton(w * 0.51, h * 0.505, w * 0.225, h * 0.09, buttonColor[2]);
-		this.ballButtons.addColorButton(w * 0.755, h * 0.505, w * 0.225, h * 0.09, buttonColor[3]);
-		this.ballButtons.addColorButton(w * 0.02, h * 0.605, w * 0.225, h * 0.09, buttonColor[4]);
-		this.ballButtons.addColorButton(w * 0.265, h * 0.605, w * 0.225, h * 0.09, buttonColor[5]);
-		this.ballButtons.addColorButton(w * 0.51, h * 0.605, w * 0.225, h * 0.09, buttonColor[6]);
-		this.ballButtons.addColorButton(w * 0.755, h * 0.605, w * 0.225, h * 0.09, buttonColor[7]);
+		const ballButtonWidth = w * 0.225;
+		const ballButtonHeight = h * 0.09;
+		this.ballButtons.addColorButton(w * 0.02, h * 0.505, ballButtonWidth, ballButtonHeight, buttonColor[0]);
+		this.ballButtons.addColorButton(w * 0.265, h * 0.505, ballButtonWidth, ballButtonHeight, buttonColor[1]);
+		this.ballButtons.addColorButton(w * 0.51, h * 0.505, ballButtonWidth, ballButtonHeight, buttonColor[2]);
+		this.ballButtons.addColorButton(w * 0.755, h * 0.505, ballButtonWidth, ballButtonHeight, buttonColor[3]);
+		this.ballButtons.addColorButton(w * 0.02, h * 0.605, ballButtonWidth, ballButtonHeight, buttonColor[4]);
+		this.ballButtons.addColorButton(w * 0.265, h * 0.605, ballButtonWidth, ballButtonHeight, buttonColor[5]);
+		this.ballButtons.addColorButton(w * 0.51, h * 0.605, ballButtonWidth, ballButtonHeight, buttonColor[6]);
+		this.ballButtons.addColorButton(w * 0.755, h * 0.605, ballButtonWidth, ballButtonHeight, buttonColor[7]);
 		//const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic, createHeavyBallGraphic, createMagicalBallGraphic];
-		const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic];
+		// ごちゃごちゃしててわけわからんー
+		//const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic];
 		let activeButtonGraphicArray = [];
 		let nonActiveButtonGraphicArray = [];
-		for(const func of specialBallCreateFunctionArray){
-			activeButtonGraphicArray.push(createSpecialBallButtonGraphic(r * 2.4, r * 2.4, func));
-			nonActiveButtonGraphicArray.push(createSpecialBallButtonGraphic(r * 2.4, r * 2.4, func, 0.5));
+		for(let i = 8; i <= 9; i++){
+			activeButtonGraphicArray.push(createSpecialBallButtonGraphic(ballButtonWidth, ballButtonHeight, this.ballGraphic.normal[i]));
+			nonActiveButtonGraphicArray.push(createSpecialBallButtonGraphic(ballButtonWidth, ballButtonHeight, this.ballGraphic.pale[i], 0.5));
 		}
-		this.ballButtons.addNormalButton(w * 0.02, h * 0.705, w * 0.225, h * 0.09, activeButtonGraphicArray[0], nonActiveButtonGraphicArray[0]);
-		this.ballButtons.addNormalButton(w * 0.265, h * 0.705, w * 0.225, h * 0.09, activeButtonGraphicArray[1], nonActiveButtonGraphicArray[1]);
+		this.ballButtons.addNormalButton(w * 0.02, h * 0.705, ballButtonWidth, ballButtonHeight,
+			                               activeButtonGraphicArray[0], nonActiveButtonGraphicArray[0]);
+		this.ballButtons.addNormalButton(w * 0.265, h * 0.705, ballButtonWidth, ballButtonHeight,
+			                               activeButtonGraphicArray[1], nonActiveButtonGraphicArray[1]);
 		this.ballButtons.initialize();
     // モードを変更する為のボタン
 		this.modeButtons = new UniqueButtonSet();
@@ -308,19 +328,22 @@ class System{
 		this.ballKindId = this.ballButtons.getActiveButtonId();
 	}
 	addBallCheck(x, y){
+		// ある程度のマージンを持たせて密着しないようにする。
 		// 最初に個数の確認
 		if(this.balls.length > BALL_CAPACITY){ return false; }
-		// (x, y)の位置を中心とするある程度の半径のボールが出現させられるかどうか。
-		// 具体的には既存のボールと位置が一定以上かぶらないこと、さらに壁にめり込まないことが条件。trueかfalseを返すbool値の関数。
 
-		// もしballKindにより半径が異なるのであればここは「BALL_RADIUS * 2」でなく「b.radius + 個々の半径」とでもするべき。
+		// 先に新しいボールの半径を計算しちゃう。
+		const newBallRadius = this.ballSizeFactor * BALL_RADIUS;
+
+		// 個々のボールと位置が被らないかどうか
     for(let b of this.balls){
-			if(dist(b.position.x, b.position.y, x, y) < BALL_RADIUS * 2 + BALL_APPEAR_MARGIN){ return false; }
+			if(dist(b.position.x, b.position.y, x, y) < b.radius + newBallRadius + BALL_APPEAR_MARGIN){ return false; }
 		}
-		// これ別やん・・壁の近くには置けないようにする
-		// ここもBALL_RADIUSの代わりに個々の半径を使うことになるね。
-		if(x < BALL_RADIUS + BALL_APPEAR_MARGIN || x > AREA_WIDTH - BALL_RADIUS - BALL_APPEAR_MARGIN){ return false; }
-		if(y < BALL_RADIUS + BALL_APPEAR_MARGIN || y > AREA_HEIGHT - BALL_RADIUS - BALL_APPEAR_MARGIN){ return false; }
+
+		// 壁にめり込まないかどうか。
+		if(x < newBallRadius + BALL_APPEAR_MARGIN || x > AREA_WIDTH - newBallRadius - BALL_APPEAR_MARGIN){ return false; }
+		if(y < newBallRadius + BALL_APPEAR_MARGIN || y > AREA_HEIGHT - newBallRadius - BALL_APPEAR_MARGIN){ return false; }
+
 		// もろもろ潜り抜けたらOK.
 		return true;
 	}
@@ -517,10 +540,13 @@ class NormalButton extends Button{
 		this.inActiveGraphic = inActiveGraphic;
 	}
 	draw(gr){
+		// 信じられない、AREA_WIDTHとかになってた。再利用できないじゃん。
 		if(this.active){
-			gr.image(this.activeGraphic, this.left, this.top, this.w, this.h, 0, 0, AREA_WIDTH, AREA_HEIGHT);
+			gr.image(this.activeGraphic, this.left, this.top, this.w, this.h,
+				       0, 0, this.activeGraphic.width, this.inActiveGraphic.height);
 		}else{
-			gr.image(this.inActiveGraphic, this.left, this.top, this.w, this.h, 0, 0, AREA_WIDTH, AREA_HEIGHT);
+			gr.image(this.inActiveGraphic, this.left, this.top, this.w, this.h,
+				       0, 0, this.activeGraphic.width, this.inActiveGraphic.height);
 		}
 	}
 }
@@ -946,8 +972,8 @@ function createConfigGraphic(){
 
 // ボール画像作り直し。paleRatioは0.0がデフォで1.0に近づくと白くなる。
 // HSBやめたから普通にlerpColorで作る。
-function createBallGraphic(colorId, paleRatio = 0.0){
-  const r = BALL_RADIUS;
+function createColorBallGraphic(colorId, paleRatio = 0.0){
+  const r = ORIGIN_BALL_RADIUS;
 
 	let gr = createGraphics(r * 2.4, r * 2.4);
 	gr.noStroke();
@@ -969,7 +995,7 @@ function createIceBallGraphic(paleRatio = 0.0){
 	// まずradiusの20%まで外側から水色→白のグラデーションで30分割くらいで円弧を描く（noFill）
 	// ベースは薄い水色で。
 	// 最後に濃い水色のダイヤを30°ずつ回転させて6つ描く感じ。中心に半径の20%の円を描いてその上を点が動く感じ。
-  const r = BALL_RADIUS;
+  const r = ORIGIN_BALL_RADIUS;
 
   let gr = createGraphics(r * 2.4, r * 2.4);
 	gr.noStroke();
@@ -1008,7 +1034,7 @@ function createIceBallGraphic(paleRatio = 0.0){
 function createThunderBallGraphic(paleRatio = 0.0){
 	// オレンジ系、中央に稲妻。
 	// オレンジ、中央に稲妻。
-  const r = BALL_RADIUS;
+  const r = ORIGIN_BALL_RADIUS;
 
 	let gr = createGraphics(r * 2.4, r * 2.4);
   gr.noStroke();
@@ -1068,16 +1094,18 @@ function createColorButtonGraphic(w, h, buttonColor, paleRatio = 0.0, innerText 
 // 特殊なボール選択のためのボタングラフィック。
 // アイス限定ではなく汎用にした方がいいに決まってるのでそうする。
 // スペシャルボールボタングラフィック。
-function createSpecialBallButtonGraphic(w, h, createFunction, paleRatio = 0.0){
+// 画像とpale情報だけ送るように変更。
+// 背景めんどうだから灰色系にした
+function createSpecialBallButtonGraphic(w, h, ballGraphic, paleRatio = 0.0){
 	let gr = createGraphics(w, h);
 	const baseColor = lerpColor(color(64), color(255), paleRatio);
 	gr.noStroke();
 	gr.fill(lerpColor(baseColor, color(255), 0.3));
 	gr.rect(0, 0, w, h);
-	const iceBallGraphic = createFunction(paleRatio);
+	//const iceBallGraphic = createFunction(paleRatio);
 	const t = min(w, h);
-	const r = BALL_RADIUS;
-	gr.image(iceBallGraphic, w/2 - t/2, h/2 - t/2, t, t, 0, 0, r * 2.4, r * 2.4);
+	const r = ORIGIN_BALL_RADIUS;
+	gr.image(ballGraphic, w/2 - t/2, h/2 - t/2, t, t, 0, 0, r * 2.4, r * 2.4);
 	return gr;
 }
 

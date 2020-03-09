@@ -5,6 +5,8 @@ function setup(){
   noLoop();
 	noStroke();
 	rectMode(CENTER);
+	//let gr = createGraphics(400, 400);
+	//console.log(gr.width);
 }
 
 function draw(){
