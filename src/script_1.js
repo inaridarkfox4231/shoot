@@ -44,9 +44,9 @@ const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 // 順に赤、オレンジ、黄色、緑、水色、青、紫、ピンク。その次は"#32cd32"（黄緑）でモード選択用。
 // 9番目としてアイスボールが消えるときの色。シアンにする。
 // 10番目としてサンダーボールが消えるときの色。ゴールドにする。
-// 11番目。ヘビーボールは黒。ガーター作らないとな・・
+// 11番目。ヘビーボールは灰色。ガーター作らないとな・・
 const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32",
-                       "#00a1e9", "#ffd700", "#000000"];
+                       "#00a1e9", "#ffd700", "#888"];
 // たとえば色によってサイズを変えるのであれば
 // const SIZE_FACTOR = [1.0, 1.2, 1.4, 1.6, 1.8, etc...]
 // とかしてその値を使うことになるかな・・
@@ -359,11 +359,11 @@ class System{
 		//const y = mouseY;
 		if(mouseX < CONFIG_WIDTH || mouseX > width || mouseY < 0 || mouseY > AREA_HEIGHT){ return; }
     // 一旦activeになってるところをinActivateしたうえで、必要なら更新して、それからactivateする。
-		this.boardButtons.activateButton();
+		this.boardButtons.activate();
 		this.boardId = this.boardButtons.getActiveButtonId();
-		this.modeButtons.activateButton();
+		this.modeButtons.activate();
 		this.modeId = this.modeButtons.getActiveButtonId();
-		this.ballButtons.activateButton();
+		this.ballButtons.activate();
 		this.ballKindId = this.ballButtons.getActiveButtonId();
 	}
 	activateSlider(){
@@ -557,171 +557,6 @@ class System{
 			}
 		}
 		this.particles.remove();
-	}
-}
-
-// -------------------------------------------------------------------------------------------------------------------- //
-// Button.
-// 背景選択ボタン、ボール選択ボタン、モード選択ボタンの3種類。
-// ADD:ボールを追加する。
-// MOV:ボールを動かす。
-// DEL:ボールを削除する。
-
-// アニメ要らんわ
-
-class Button{
-	constructor(left, top, w, h){
-		this.left = left;
-		this.top = top;
-		this.w = w;
-		this.h = h;
-		this.active = false;
-	}
-	setOffSet(offSetX, offSetY){
-		this.offSetX = offSetX;
-		this.offSetY = offSetY;
-	}
-	activate(){
-		this.active = true;
-	}
-	inActivate(){
-		this.active = false;
-	}
-	hit(){
-		// クリック位置がボタンに触れてるかどうかをこれで判定する。
-		const x = mouseX - this.offSetX;
-		const y = mouseY - this.offSetY;
-		return this.left < x && x < this.left + this.w && this.top < y && y < this.top + this.h;
-	}
-	draw(gr){
-		// activeなときとactiveでないときで描画の仕方を変えるんだけどその指定の仕方で別クラスにする。
-	}
-}
-
-// Buttonを2種類作る。
-// 今まで通りのパレットのやつはColorButtonで背景選択用のやつはNormalButtonでこれはactiveなときとそうでない時の
-// それぞれの画像を用意して持たせる。だからそこだけ変える。
-// 廃止しません。ごめんね！
-// あ、そうか、ColorButtonの定義を変えちゃえばいいんだ。constructorで作っちゃえばいい。その際paleRatioも指定しちゃおう。
-// colorIdやめてbuttonColorを渡すように仕様変更
-class ColorButton extends Button{
-	constructor(left, top, w, h, buttonColor, innerText = ""){
-		super(left, top, w, h);
-		this.activeGraphic = createColorButtonGraphic(w, h, buttonColor, 0.0, innerText);
-		this.inActiveGraphic = createColorButtonGraphic(w, h, buttonColor, 0.7, innerText);
-	}
-	draw(gr){
-		// 画像は大きさを変えずにそのまま使う（文字のサイズとか変わっちゃうのでサムネ方式では駄目）
-		if(this.active){
-			gr.image(this.activeGraphic, this.left, this.top);
-		}else{
-			gr.image(this.inActiveGraphic, this.left, this.top);
-		}
-	}
-}
-
-// 2つの画像を用意してactiveに応じて切り替える。
-// ボール選択とモード選択は薄い色にしたい感じ。ここには書かないけど。
-// 背景選択の方ではサムネイルのようにして使う。
-class NormalButton extends Button{
-	constructor(left, top, w, h, activeGraphic, inActiveGraphic){
-		super(left, top, w, h);
-		this.activeGraphic = activeGraphic;
-		this.inActiveGraphic = inActiveGraphic;
-	}
-	draw(gr){
-		// 信じられない、AREA_WIDTHとかになってた。再利用できないじゃん。
-		if(this.active){
-			gr.image(this.activeGraphic, this.left, this.top, this.w, this.h,
-				       0, 0, this.activeGraphic.width, this.inActiveGraphic.height);
-		}else{
-			gr.image(this.inActiveGraphic, this.left, this.top, this.w, this.h,
-				       0, 0, this.activeGraphic.width, this.inActiveGraphic.height);
-		}
-	}
-}
-
-// ボタンを集めただけ。配列。
-class ButtonSet{
-	constructor(){
-		this.buttons = [];
-		this.size = 0; // ボタンの個数
-		//this.activeButtonId = 0;
-	}
-	initialize(offSetX, offSetY){
-	  /* 初期化 */
-		for(let btn of this.buttons){
-			btn.setOffSet(offSetX, offSetY);
-		}
-	}
-	addColorButton(left, top, w, h, buttonColor, innerText = ""){
-		// ColorButtonを追加する
-		this.buttons.push(new ColorButton(left, top, w, h, buttonColor, innerText));
-		this.size++;
-	}
-	addNormalButton(left, top, w, h, activeGraphic, inActiveGraphic){
-		// NormalButtonを追加する
-		this.buttons.push(new NormalButton(left, top, w, h, activeGraphic, inActiveGraphic));
-		this.size++;
-	}
-	getTargetButtonId(){
-		// クリック位置がボタンにヒットするならそれのidを返すがなければ-1を返す。
-    for(let i = 0; i < this.size; i++){
-			if(this.buttons[i].hit()){ return i; }
-		}
-		return -1;
-	}
-	draw(gr){
-		// ボタンが多い場合に・・表示工夫したり必要なんかな。
-		for(let btn of this.buttons){ btn.draw(gr); }
-	}
-}
-
-// 一度にひとつのボタンしかアクティブにならないボタンセット
-class UniqueButtonSet extends ButtonSet{
-	constructor(initialActiveButtonId = 0){
-		super();
-		this.activeButtonId = initialActiveButtonId;  // 最初にアクティブになっているボタンのid（デフォは0）
-	}
-	initialize(offSetX, offSetY){
-		super.initialize(offSetX, offSetY);
-		this.buttons[this.activeButtonId].activate();
-	}
-	getActiveButtonId(){
-		// activeなボタンのidは一意なのでそれを返す。
-		return this.activeButtonId;
-	}
-	activateButton(){
-    // クリック位置がボタンにヒットする場合に、それをactivateして、それ以外をinActivateする感じ。
-		const targetButtonId = this.getTargetButtonId();
-		if(targetButtonId < 0){ return; }
-    this.buttons[this.activeButtonId].inActivate();
-		this.activeButtonId = targetButtonId;
-		this.buttons[this.activeButtonId].activate();
-	}
-}
-
-// 一度に複数のボタンがアクティブになれるボタンセット
-// 使わないけどね（何で用意したの）
-class MultiButtonSet extends ButtonSet{
-	constructor(){
-		super();
-		this.activeState = [];
-	}
-	initialize(offSetX, offSetY){
-		super.initialize(offSetX, offSetY);
-		for(let i = 0; i < this.size; i++){ this.activeState.push(false); }
-	}
-	getActiveState(){
-		return this.activeState;
-	}
-	activateButton(){
-		// クリック位置のボタンのactiveを切り替える感じ。
-		const targetButtonId = this.getTargetButtonId();
-		if(targetButtonId < 0){ return; }
-		let btn = this.buttons[targetButtonId];
-		if(btn.active){ btn.inActivate(); }else{ btn.activate(); }
-		this.activeState[targetButtonId] = btn.active;
 	}
 }
 
@@ -1256,6 +1091,172 @@ function drawCross(x, y, radius, rotationAngle, shapeColor){
 	quad(x, y, p[5].x, p[5].y, p[1].x, p[1].y, p[4].x, p[4].y);
 	quad(x, y, p[6].x, p[6].y, p[2].x, p[2].y, p[5].x, p[5].y);
 	quad(x, y, p[7].x, p[7].y, p[3].x, p[3].y, p[6].x, p[6].y);
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// Button.
+// 背景選択ボタン、ボール選択ボタン、モード選択ボタンの3種類。
+// ADD:ボールを追加する。
+// MOV:ボールを動かす。
+// DEL:ボールを削除する。
+
+// アニメ要らんわ
+
+class Button{
+	constructor(left, top, w, h){
+		this.left = left;
+		this.top = top;
+		this.w = w;
+		this.h = h;
+		this.active = false;
+	}
+	setOffSet(offSetX, offSetY){
+		this.offSetX = offSetX;
+		this.offSetY = offSetY;
+	}
+	activate(){
+		this.active = true;
+	}
+	inActivate(){
+		this.active = false;
+	}
+	hit(){
+		// クリック位置がボタンに触れてるかどうかをこれで判定する。
+		const x = mouseX - this.offSetX;
+		const y = mouseY - this.offSetY;
+		return this.left < x && x < this.left + this.w && this.top < y && y < this.top + this.h;
+	}
+	draw(gr){
+		// activeなときとactiveでないときで描画の仕方を変えるんだけどその指定の仕方で別クラスにする。
+	}
+}
+
+// Buttonを2種類作る。
+// 今まで通りのパレットのやつはColorButtonで背景選択用のやつはNormalButtonでこれはactiveなときとそうでない時の
+// それぞれの画像を用意して持たせる。だからそこだけ変える。
+// 廃止しません。ごめんね！
+// あ、そうか、ColorButtonの定義を変えちゃえばいいんだ。constructorで作っちゃえばいい。その際paleRatioも指定しちゃおう。
+// colorIdやめてbuttonColorを渡すように仕様変更
+class ColorButton extends Button{
+	constructor(left, top, w, h, buttonColor, innerText = ""){
+		super(left, top, w, h);
+		this.activeGraphic = createColorButtonGraphic(w, h, buttonColor, 0.0, innerText);
+		this.inActiveGraphic = createColorButtonGraphic(w, h, buttonColor, 0.7, innerText);
+	}
+	draw(gr){
+		// 画像は大きさを変えずにそのまま使う（文字のサイズとか変わっちゃうのでサムネ方式では駄目）
+		if(this.active){
+			gr.image(this.activeGraphic, this.left, this.top);
+		}else{
+			gr.image(this.inActiveGraphic, this.left, this.top);
+		}
+	}
+}
+
+// 2つの画像を用意してactiveに応じて切り替える。
+// ボール選択とモード選択は薄い色にしたい感じ。ここには書かないけど。
+// 背景選択の方ではサムネイルのようにして使う。
+class NormalButton extends Button{
+	constructor(left, top, w, h, activeGraphic, inActiveGraphic){
+		super(left, top, w, h);
+		this.activeGraphic = activeGraphic;
+		this.inActiveGraphic = inActiveGraphic;
+	}
+	draw(gr){
+		// 信じられない、AREA_WIDTHとかになってた。再利用できないじゃん。
+		if(this.active){
+			gr.image(this.activeGraphic, this.left, this.top, this.w, this.h,
+				       0, 0, this.activeGraphic.width, this.inActiveGraphic.height);
+		}else{
+			gr.image(this.inActiveGraphic, this.left, this.top, this.w, this.h,
+				       0, 0, this.activeGraphic.width, this.inActiveGraphic.height);
+		}
+	}
+}
+
+// ボタンを集めただけ。配列。
+class ButtonSet{
+	constructor(){
+		this.buttons = [];
+		this.size = 0; // ボタンの個数
+		//this.activeButtonId = 0;
+	}
+	initialize(offSetX, offSetY){
+	  /* 初期化 */
+		for(let btn of this.buttons){
+			btn.setOffSet(offSetX, offSetY);
+		}
+	}
+	addColorButton(left, top, w, h, buttonColor, innerText = ""){
+		// ColorButtonを追加する
+		this.buttons.push(new ColorButton(left, top, w, h, buttonColor, innerText));
+		this.size++;
+	}
+	addNormalButton(left, top, w, h, activeGraphic, inActiveGraphic){
+		// NormalButtonを追加する
+		this.buttons.push(new NormalButton(left, top, w, h, activeGraphic, inActiveGraphic));
+		this.size++;
+	}
+	getTargetButtonId(){
+		// クリック位置がボタンにヒットするならそれのidを返すがなければ-1を返す。
+    for(let i = 0; i < this.size; i++){
+			if(this.buttons[i].hit()){ return i; }
+		}
+		return -1;
+	}
+	activate(){ /* ボタンのactivate関連処理 */ }
+	draw(gr){
+		// ボタンが多い場合に・・表示工夫したり必要なんかな。
+		for(let btn of this.buttons){ btn.draw(gr); }
+	}
+}
+
+// 一度にひとつのボタンしかアクティブにならないボタンセット
+class UniqueButtonSet extends ButtonSet{
+	constructor(initialActiveButtonId = 0){
+		super();
+		this.activeButtonId = initialActiveButtonId;  // 最初にアクティブになっているボタンのid（デフォは0）
+	}
+	initialize(offSetX, offSetY){
+		super.initialize(offSetX, offSetY);
+		this.buttons[this.activeButtonId].activate();
+	}
+	getActiveButtonId(){
+		// activeなボタンのidは一意なのでそれを返す。
+		return this.activeButtonId;
+	}
+	activate(){
+    // クリック位置がボタンにヒットする場合に、それをactivateして、それ以外をinActivateする感じ。
+		const targetButtonId = this.getTargetButtonId();
+		if(targetButtonId < 0){ return; }
+    this.buttons[this.activeButtonId].inActivate();
+		this.activeButtonId = targetButtonId;
+		this.buttons[this.activeButtonId].activate();
+	}
+}
+
+// 一度に複数のボタンがアクティブになれるボタンセット
+// 使わないけどね（何で用意したの）
+class MultiButtonSet extends ButtonSet{
+	constructor(){
+		super();
+		this.activeState = [];
+	}
+	initialize(offSetX, offSetY){
+		super.initialize(offSetX, offSetY);
+		for(let i = 0; i < this.size; i++){ this.activeState.push(false); }
+	}
+	getActiveState(){
+		return this.activeState;
+	}
+	activate(){
+		// クリック位置のボタンのactiveを切り替える感じ。
+		const targetButtonId = this.getTargetButtonId();
+		if(targetButtonId < 0){ return; }
+		let btn = this.buttons[targetButtonId];
+		if(btn.active){ btn.inActivate(); }else{ btn.activate(); }
+		this.activeState[targetButtonId] = btn.active;
+	}
 }
 
 // ---------------------------------------------------------------------------------------- //
