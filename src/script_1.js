@@ -28,6 +28,7 @@ let mySystem;
 
 const AREA_WIDTH =  360;
 const AREA_HEIGHT = AREA_WIDTH * 1.5;
+const GUTTER_PROPORTION = 0.1;
 
 const ORIGIN_BALL_RADIUS = 100; // 画像用の半径。これを元にボール画像を作って、個別の描画ではこれを渡して適切に拡縮して使う。
 
@@ -86,6 +87,7 @@ function setup(){
 function draw(){
   mySystem.update();
   mySystem.applyCollide();
+	mySystem.applyGutter();
   mySystem.draw();
 	mySystem.removeObjects();
 }
@@ -296,6 +298,9 @@ class System{
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
 		const r = BALL_RADIUS;
+		// コンフィグボードの位置
+		const offSetX = AREA_WIDTH;
+		const offSetY = 0;
     // 背景選択用ボタン
 		this.boardButtons = new UniqueButtonSet();
 		const atv = this.boardGraphic.active;
@@ -307,7 +312,7 @@ class System{
 		this.boardButtons.addNormalButton(w * 0.438, h * 0.26, boardButtonWidth, boardButtonHeight, atv[2], inAtv[2]);
 		this.boardButtons.addNormalButton(w * 0.632, h * 0.26, boardButtonWidth, boardButtonHeight, atv[3], inAtv[3]);
 		this.boardButtons.addNormalButton(w * 0.826, h * 0.26, boardButtonWidth, boardButtonHeight, atv[4], inAtv[4]);
-		this.boardButtons.initialize();
+		this.boardButtons.initialize(offSetX, offSetY);
     // ボールの種類を選択する為のボタン
 		// ballButtonsに改名。
 		let buttonColor = [];
@@ -338,7 +343,7 @@ class System{
 			                               activeButtonGraphicArray[1], nonActiveButtonGraphicArray[1]);
 		this.ballButtons.addNormalButton(w * 0.51, h * 0.705, ballButtonWidth, ballButtonHeight,
 																 		 activeButtonGraphicArray[2], nonActiveButtonGraphicArray[2]);
-		this.ballButtons.initialize();
+		this.ballButtons.initialize(offSetX, offSetY);
     // モードを変更する為のボタン
 		this.modeButtons = new UniqueButtonSet();
 		const modeButtonWidth = w * 0.3;
@@ -346,19 +351,19 @@ class System{
 		this.modeButtons.addColorButton(w * 0.025, h * 0.9, modeButtonWidth, modeButtonHeight, buttonColor[8], "ADD");
 		this.modeButtons.addColorButton(w * 0.35, h * 0.9, modeButtonWidth, modeButtonHeight, buttonColor[8], "MOV");
 		this.modeButtons.addColorButton(w * 0.675, h * 0.9, modeButtonWidth, modeButtonHeight, buttonColor[8], "DEL");
-		this.modeButtons.initialize();
+		this.modeButtons.initialize(offSetX, offSetY);
 	}
 	activateButton(){
 		// 他の種類のボタンもできるようにボタンをまとめたクラスを用意すべきかもね。
-    const x = mouseX - AREA_WIDTH;
-		const y = mouseY;
-		if(x < 0 || x > CONFIG_WIDTH || y < 0 || y > AREA_HEIGHT){ return; }
+    //const x = mouseX - AREA_WIDTH;
+		//const y = mouseY;
+		if(mouseX < CONFIG_WIDTH || mouseX > width || mouseY < 0 || mouseY > AREA_HEIGHT){ return; }
     // 一旦activeになってるところをinActivateしたうえで、必要なら更新して、それからactivateする。
-		this.boardButtons.activateButton(x, y);
+		this.boardButtons.activateButton();
 		this.boardId = this.boardButtons.getActiveButtonId();
-		this.modeButtons.activateButton(x, y);
+		this.modeButtons.activateButton();
 		this.modeId = this.modeButtons.getActiveButtonId();
-		this.ballButtons.activateButton(x, y);
+		this.ballButtons.activateButton();
 		this.ballKindId = this.ballButtons.getActiveButtonId();
 	}
 	activateSlider(){
@@ -502,8 +507,19 @@ class System{
   		}
   	}
   }
+  applyGutter(){
+		for(let b of this.balls){
+			if(b.position.y < AREA_HEIGHT * GUTTER_PROPORTION || b.position.y > AREA_HEIGHT * (1 - GUTTER_PROPORTION)){ b.kill(); }
+		}
+	}
   draw(){
+		// 背景描画
 		image(this.boardGraphic.active[this.boardId], 0, 0);
+    // ガター描画
+		fill(0);
+		rect(0, 0, AREA_WIDTH, AREA_HEIGHT * GUTTER_PROPORTION);
+		rect(0, AREA_HEIGHT * (1 - GUTTER_PROPORTION), AREA_WIDTH, AREA_HEIGHT);
+    // ボール描画
     for(let b of this.balls){ b.draw(); }
 		this.particles.draw(); // particleのdraw.
     this.shooter.draw(); // うまくいくか
@@ -561,14 +577,20 @@ class Button{
 		this.h = h;
 		this.active = false;
 	}
+	setOffSet(offSetX, offSetY){
+		this.offSetX = offSetX;
+		this.offSetY = offSetY;
+	}
 	activate(){
 		this.active = true;
 	}
 	inActivate(){
 		this.active = false;
 	}
-	hit(x, y){
+	hit(){
 		// クリック位置がボタンに触れてるかどうかをこれで判定する。
+		const x = mouseX - this.offSetX;
+		const y = mouseY - this.offSetY;
 		return this.left < x && x < this.left + this.w && this.top < y && y < this.top + this.h;
 	}
 	draw(gr){
@@ -626,7 +648,12 @@ class ButtonSet{
 		this.size = 0; // ボタンの個数
 		//this.activeButtonId = 0;
 	}
-	initialize(){ /* 初期化 */ }
+	initialize(offSetX, offSetY){
+	  /* 初期化 */
+		for(let btn of this.buttons){
+			btn.setOffSet(offSetX, offSetY);
+		}
+	}
 	addColorButton(left, top, w, h, buttonColor, innerText = ""){
 		// ColorButtonを追加する
 		this.buttons.push(new ColorButton(left, top, w, h, buttonColor, innerText));
@@ -637,10 +664,10 @@ class ButtonSet{
 		this.buttons.push(new NormalButton(left, top, w, h, activeGraphic, inActiveGraphic));
 		this.size++;
 	}
-	getTargetButtonId(x, y){
-		// (x, y)がボタンにヒットするならそれのidを返すがなければ-1を返す。
+	getTargetButtonId(){
+		// クリック位置がボタンにヒットするならそれのidを返すがなければ-1を返す。
     for(let i = 0; i < this.size; i++){
-			if(this.buttons[i].hit(x, y)){ return i; }
+			if(this.buttons[i].hit()){ return i; }
 		}
 		return -1;
 	}
@@ -656,16 +683,17 @@ class UniqueButtonSet extends ButtonSet{
 		super();
 		this.activeButtonId = initialActiveButtonId;  // 最初にアクティブになっているボタンのid（デフォは0）
 	}
-	initialize(){
+	initialize(offSetX, offSetY){
+		super.initialize(offSetX, offSetY);
 		this.buttons[this.activeButtonId].activate();
 	}
 	getActiveButtonId(){
 		// activeなボタンのidは一意なのでそれを返す。
 		return this.activeButtonId;
 	}
-	activateButton(x, y){
-    // (x, y)がボタンにヒットする場合に、それをactivateして、それ以外をinActivateする感じ。
-		const targetButtonId = this.getTargetButtonId(x, y);
+	activateButton(){
+    // クリック位置がボタンにヒットする場合に、それをactivateして、それ以外をinActivateする感じ。
+		const targetButtonId = this.getTargetButtonId();
 		if(targetButtonId < 0){ return; }
     this.buttons[this.activeButtonId].inActivate();
 		this.activeButtonId = targetButtonId;
@@ -680,15 +708,16 @@ class MultiButtonSet extends ButtonSet{
 		super();
 		this.activeState = [];
 	}
-	initialize(){
+	initialize(offSetX, offSetY){
+		super.initialize(offSetX, offSetY);
 		for(let i = 0; i < this.size; i++){ this.activeState.push(false); }
 	}
 	getActiveState(){
 		return this.activeState;
 	}
-	activateButton(x, y){
-		// (x, y)がヒットしたボタンのactiveを切り替える感じ。
-		const targetButtonId = this.getTargetButtonId(x, y);
+	activateButton(){
+		// クリック位置のボタンのactiveを切り替える感じ。
+		const targetButtonId = this.getTargetButtonId();
 		if(targetButtonId < 0){ return; }
 		let btn = this.buttons[targetButtonId];
 		if(btn.active){ btn.inActivate(); }else{ btn.activate(); }
