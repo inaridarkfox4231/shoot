@@ -43,7 +43,9 @@ const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 // 順に赤、オレンジ、黄色、緑、水色、青、紫、ピンク。その次は"#32cd32"（黄緑）でモード選択用。
 // 9番目としてアイスボールが消えるときの色。シアンにする。
 // 10番目としてサンダーボールが消えるときの色。ゴールドにする。
-const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32", "#00a1e9", "#ffd700"];
+// 11番目。ヘビーボールは黒。ガーター作らないとな・・
+const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#0000cd", "#800080", "#ff1493", "#32cd32",
+                       "#00a1e9", "#ffd700", "#000000"];
 // たとえば色によってサイズを変えるのであれば
 // const SIZE_FACTOR = [1.0, 1.2, 1.4, 1.6, 1.8, etc...]
 // とかしてその値を使うことになるかな・・
@@ -94,6 +96,7 @@ function draw(){
 // こっちをmassFactorとballGraphicにしてそれぞれ登録する。drawはballGraphicを当てはめる形。
 class Ball{
 	constructor(x, y, ballGraphic, sizeFactor = 1.0){
+		this.type = "default";
 		this.position = createVector(x, y);
 		this.velocity = createVector(0, 0);
 		this.radius = BALL_RADIUS * sizeFactor; // sizeFactorだけ大きくなる。MAXで2.5の予定。
@@ -102,7 +105,12 @@ class Ball{
 		this.graphic = ballGraphic;
 		this.alive = true; // aliveがfalseになったら排除する。
 	}
+	setVelocityCartesian(vx, vy){
+		// デカルト座標系
+		this.velocity.set(vx, vy);
+	}
 	setVelocity(speed, direction){
+		// 極座標系
 		this.velocity.set(speed * cos(direction), speed * sin(direction));
 	}
 	applyReflection(){
@@ -206,10 +214,16 @@ class ThunderBall extends Ball{
 
 // ヘビーボールはmassFactorが2.0で摩擦係数が1.5倍の0.3になってる。
 // 消滅しない。残る。
-// class heavyball extends Ball{}
+class HeavyBall extends Ball{
+	constructor(x, y, ballGraphic, sizeFactor){
+		super(x, y, ballGraphic, sizeFactor);
+		this.type = "heavy";
+		this.massFactor = 2.0;
+		this.friction = FRICTION_COEFFICIENT * 1.5;
+	}
+}
 
-// マジカルボールは衝突するとその種類のボールを同じ場所に出現させて自分は消える。
-// 位置と速度をコピー。
+// マジカルボール、ボツ（面白くない）
 
 // ライトアークボール、レフトアークボールはおいおい。進行方向がカーブする感じ・・
 
@@ -262,6 +276,9 @@ class System{
 		// サンダーボールのグラフィック(9)
 		this.ballGraphic.normal.push(createThunderBallGraphic());
 		this.ballGraphic.pale.push(createThunderBallGraphic(0.5));
+		// ヘビーボールのグラフィック(10)
+		this.ballGraphic.normal.push(createHeavyBallGraphic());
+		this.ballGraphic.pale.push(createHeavyBallGraphic(0.5));
 		// 8, 9, 10, 11は今後・・
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
@@ -311,7 +328,7 @@ class System{
 		//const specialBallCreateFunctionArray = [createIceBallGraphic, createThunderBallGraphic];
 		let activeButtonGraphicArray = [];
 		let nonActiveButtonGraphicArray = [];
-		for(let i = 8; i <= 9; i++){
+		for(let i = 8; i <= 10; i++){
 			activeButtonGraphicArray.push(createSpecialBallButtonGraphic(ballButtonWidth, ballButtonHeight, this.ballGraphic.normal[i]));
 			nonActiveButtonGraphicArray.push(createSpecialBallButtonGraphic(ballButtonWidth, ballButtonHeight, this.ballGraphic.pale[i], 0.5));
 		}
@@ -319,6 +336,8 @@ class System{
 			                               activeButtonGraphicArray[0], nonActiveButtonGraphicArray[0]);
 		this.ballButtons.addNormalButton(w * 0.265, h * 0.705, ballButtonWidth, ballButtonHeight,
 			                               activeButtonGraphicArray[1], nonActiveButtonGraphicArray[1]);
+		this.ballButtons.addNormalButton(w * 0.51, h * 0.705, ballButtonWidth, ballButtonHeight,
+																 		 activeButtonGraphicArray[2], nonActiveButtonGraphicArray[2]);
 		this.ballButtons.initialize();
     // モードを変更する為のボタン
 		this.modeButtons = new UniqueButtonSet();
@@ -385,6 +404,10 @@ class System{
 				break;
 			case 9:
 			  this.balls.push(new ThunderBall(x, y, normalGraphic, this.ballSizeFactor));
+				break;
+			case 10:
+				this.balls.push(new HeavyBall(x, y, normalGraphic, this.ballSizeFactor));
+				break;
 		}
   }
   findBall(x, y){
@@ -426,6 +449,9 @@ class System{
 			case "thunder":
 				this.particles.createParticle(x, y, color(COLOR_PALETTE[10]), drawCross, 20);
 				break;
+			case "heavy":
+				this.particles.createParticle(x, y, color(COLOR_PALETTE[11]), drawCross, 20);
+				break;
 		}
 	}
 	createParticleAtCollide(_ball, collidePoint){
@@ -445,6 +471,9 @@ class System{
 			case "thunder":
 				this.particles.createParticle(x, y, color(COLOR_PALETTE[10]), drawTriangle, 5);
 				break;
+			case "heavy":
+				this.particles.createParticle(x, y, color(COLOR_PALETTE[11]), drawTriangle, 5);
+				break;
 		}
 	}
   update(){
@@ -458,7 +487,8 @@ class System{
   		const _ball = this.balls[ballId];
   		for(let otherId = ballId + 1; otherId < this.balls.length; otherId++){
   			const _other = this.balls[otherId];
-  			if(!collisionCheck(_ball, _other)){ continue; }
+				if(!_ball.alive || !_other.alive){ continue; } // 消えたボールは無視
+  			if(!collisionCheck(_ball, _other)){ continue; } // ぶつからなければ無視
   			perfectCollision(_ball, _other);
 				// この時接しているので接点作るのは簡単。
 				const radiusRatio = _ball.radius / (_ball.radius + _other.radius);
@@ -690,7 +720,9 @@ class BallShooter{
 	getArrowLength(){
 		// 矢印の長さを計算する。ターゲットの中心からマウスまでの距離ーBALL_RADIUSで上限は横幅の6割。
 		// BALL_RADIUSを足さないと矢印の長さがきちんとあれにならない。
-		return min(dist(this.target.position.x, this.target.position.y, mouseX, mouseY), ARROWLENGTH_LIMIT + BALL_RADIUS) - BALL_RADIUS;
+		// なんか式が変だったから修正した・・。
+		//return min(dist(this.target.position.x, this.target.position.y, mouseX, mouseY), ARROWLENGTH_LIMIT + BALL_RADIUS) - BALL_RADIUS;
+		return min(dist(this.target.position.x, this.target.position.y, mouseX, mouseY) - this.target.radius, ARROWLENGTH_LIMIT);
 	}
 	shoot(){
 		// activeでないときは何もしない。
@@ -709,8 +741,9 @@ class BallShooter{
 		const arrowLength = this.getArrowLength();
 		if(arrowLength <= 0){ return; }
 		const direction = atan2(mouseY - this.target.position.y, mouseX - this.target.position.x);
-		let start = createVector(BALL_RADIUS * cos(direction), BALL_RADIUS * sin(direction));
-		let end = createVector((BALL_RADIUS + arrowLength) * cos(direction), (BALL_RADIUS + arrowLength) * sin(direction));
+		// ここBALL_RADIUSになってるけどthis.target.radiusにしないとだめだね。
+		let start = createVector(this.target.radius * cos(direction), this.target.radius * sin(direction));
+		let end = createVector((this.target.radius + arrowLength) * cos(direction), (this.target.radius + arrowLength) * sin(direction));
 		start.add(this.target.position);
 		end.add(this.target.position);
 		stroke(lerpColor(color(63, 72, 204), color(237, 28, 36), arrowLength / ARROWLENGTH_LIMIT));
@@ -1047,6 +1080,38 @@ function createThunderBallGraphic(paleRatio = 0.0){
 	gr.fill(baseColor);
 	gr.triangle(-r * 0.1, 0, -r * 0.2, r * 0.8, r * 0.4, 0);
 	gr.triangle(r * 0.1, 0, r * 0.2, -r * 0.8, -r * 0.4, 0);
+
+	return gr;
+}
+
+// ヘビーボール。
+function createHeavyBallGraphic(paleRatio = 0.0){
+	// 月形を逆にした感じ
+	const r = ORIGIN_BALL_RADIUS;
+
+	let gr = createGraphics(r * 2.4, r * 2.4);
+	gr.noStroke();
+  gr.translate(r * 1.2, r * 1.2);
+
+	const baseColor = lerpColor(color(64), color(255), paleRatio);
+	gr.fill(lerpColor(baseColor, color(255), 0.4));
+	gr.circle(0, 0, r * 2);
+	gr.noFill();
+
+	for(let i = 0; i < 30; i++){
+		let prg = i / 30;
+		prg = pow(prg, 2);
+		gr.stroke(lerpColor(baseColor, color(255), prg));
+		gr.strokeWeight(r * 0.4 / 30);
+		gr.arc(0, 0, r * (2 - 0.8 * prg), r * (2 - 0.8 * prg), 0, 2 * PI);
+	}
+
+	gr.noStroke();
+	// まず円を描いてちょっと上に同じ大きさの円をlerpedBaseColorで描く
+	gr.fill(baseColor);
+	gr.circle(0, 0, r * 0.8);
+	gr.fill(lerpColor(baseColor, color(255), 0.4));
+	gr.circle(0, -r * 0.2, r * 0.6);
 
 	return gr;
 }
