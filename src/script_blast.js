@@ -28,16 +28,17 @@ let mySystem;
 
 const AREA_WIDTH =  360;
 const AREA_HEIGHT = AREA_WIDTH * 2.0;
-const GUTTER_PROPORTION = 1 / 9;
+const GUTTER_PROPORTION = 1 / 12;
 
 const ORIGIN_BALL_RADIUS = 100; // 画像用の半径。これを元にボール画像を作って、個別の描画ではこれを渡して適切に拡縮して使う。
 
-const BALL_RADIUS = AREA_WIDTH * (1 / 18); // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
-const BALL_APPEAR_MARGIN = BALL_RADIUS * 0.001; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
+const BALL_SPACE = AREA_WIDTH * (1 / 18);
+const BALL_RADIUS = BALL_SPACE * 0.98; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
+const BALL_APPEAR_MARGIN = BALL_SPACE * 0.01; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
 const FRICTION_COEFFICIENT = 0.02; // 摩擦の大きさ（0.01から0.02に上げてみた）
 const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）
 
-const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
+const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.08; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
 // ColorBallの色はパレットから出すことにしました。
@@ -82,6 +83,7 @@ function setup(){
 	particlePool = new ObjectPool(() => { return new Particle(); }, 512);
   mySystem = new System();
   //ptn0();
+  createStage0(mySystem);
 }
 
 function draw(){
@@ -393,43 +395,54 @@ class System{
 		return true;
 	}
   addBall(x, y){
+    const pos = {x, y};
     // Ballを追加する
 		if(this.ballKindId < 8){
-      this.addColorBall(x, y, this.ballKindId);
+      this.addColorBall(pos, this.ballKindId);
 		}
 		switch(this.ballKindId){
 			case 8:
-        this.addIceBall(x, y);
+        this.addIceBall(pos);
 				break;
 			case 9:
-        this.addThunderBall(x, y);
+        this.addThunderBall(pos);
 				break;
 			case 10:
-        this.addHeavyBall(x, y);
+        this.addHeavyBall(pos);
 				break;
 		}
   }
-  addColorBall(x, y, colorId){
+  addColorBall(pos, colorId){
+    console.log(pos);
     const normalGraphic = this.ballGraphic.normal[colorId];
     const paleGraphic = this.ballGraphic.pale[colorId];
-    this.balls.push(new ColorBall(x, y, normalGraphic, this.ballSizeFactor, paleGraphic, colorId));
+    this.balls.push(new ColorBall(pos.x, pos.y, normalGraphic, this.ballSizeFactor, paleGraphic, colorId));
     return this;
   }
-  addIceBall(x, y){
+  addIceBall(pos){
     const normalGraphic = this.ballGraphic.normal[8];
     const paleGraphic = this.ballGraphic.pale[8];
-    this.balls.push(new IceBall(x, y, normalGraphic, this.ballSizeFactor, paleGraphic));
+    this.balls.push(new IceBall(pos.x, pos.y, normalGraphic, this.ballSizeFactor, paleGraphic));
     return this;
   }
-  addThunderBall(x, y){
+  addThunderBall(pos){
     const normalGraphic = this.ballGraphic.normal[9];
-    this.balls.push(new ThunderBall(x, y, normalGraphic, this.ballSizeFactor));
+    this.balls.push(new ThunderBall(pos.x, pos.y, normalGraphic, this.ballSizeFactor));
     return this;
   }
-  addHeavyBall(x, y){
+  addHeavyBall(pos){
     const normalGraphic = this.ballGraphic.normal[10];
-    this.balls.push(new HeavyBall(x, y, normalGraphic, this.ballSizeFactor));
+    this.balls.push(new HeavyBall(pos.x, pos.y, normalGraphic, this.ballSizeFactor));
     return this;
+  }
+  setStage(stageId){
+    // すべてのボールをクリアしてから、指定された配置でボールを用意する
+    this.clearBall();
+    window["createStage" + stageId.toString()](this);
+  }
+  clearBall(){
+    // すべてのボールを排除する
+    for(let b of this.balls){ b.kill(); }
   }
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールを返すがなければundefinedを返す。
@@ -508,14 +521,20 @@ class System{
   		const _ball = this.balls[ballId];
   		for(let otherId = ballId + 1; otherId < this.balls.length; otherId++){
   			const _other = this.balls[otherId];
-				if(!_ball.alive || !_other.alive){ continue; } // 消えたボールは無視
-  			if(!collisionCheck(_ball, _other)){ continue; } // ぶつからなければ無視
+        // 消えたボールは無視
+				if(!_ball.alive || !_other.alive){ continue; }
+        // ぶつからなければ無視
+  			if(!collisionCheck(_ball, _other)){ continue; }
+        // 双方のスピードが遅すぎるときは無視（これやらないとぶつかってないのにパーティクル出ちゃう）
+      	if(_ball.velocity.mag() < SPEED_LOWER_LIMIT && _other.velocity.mag() < SPEED_LOWER_LIMIT){ continue; }
+        // 衝突処理
   			perfectCollision(_ball, _other);
 				// この時接しているので接点作るのは簡単。
 				const radiusRatio = _ball.radius / (_ball.radius + _other.radius);
 				const collidePoint = {};
 				collidePoint.x = _ball.position.x * (1 - radiusRatio) + _other.position.x * radiusRatio;
 				collidePoint.y = _ball.position.y * (1 - radiusRatio) + _other.position.y * radiusRatio;
+        // 衝突時のパーティクルを生成する
 				this.createParticleAtCollide(_ball, collidePoint);
 				this.createParticleAtCollide(_other, collidePoint);
 				_ball.reaction(this, _other);
@@ -665,8 +684,6 @@ function collisionCheck(_ball, _other){
 // 壁の場合と違って移動距離の合計を質量のファクターで分配するから、同じメソッドは使えなさそう。
 function perfectCollision(_ball, _other){
 	// ballとotherが衝突したときの速度の変化を記述する（面倒なので完全弾性衝突で）
-	// その前に、双方が下限速度の場合は何もしないこととする。
-	if(_ball.velocity.mag() < SPEED_LOWER_LIMIT && _other.velocity.mag() < SPEED_LOWER_LIMIT){ return; }
 	// 重心ベクトル
 	const g = getCenterVector(_ball, _other);
 	// 相対速度
@@ -1655,10 +1672,38 @@ function mouseReleased(){
   return false;
 }
 
+// -------------------------------------------------------------------------------------------------------------------- //
+// CreateStage.
+
+function createStage0(_system){
+  // ball5_1を作ってみる。
+  const pos = {x:200, y:60 + 55 * 2 / 3};
+  _system.addColorBall(pos, 0)
+         .addColorBall(advancePosition(pos, PI * 2 / 3), 1)
+         .addColorBall(advancePosition(pos, PI * 2 / 3), 1)
+         .addColorBall(advancePosition(pos, 0), 2)
+         .addColorBall(advancePosition(pos, PI * 2 / 3), 0)
+         .addColorBall(advancePosition(advancePosition(pos, PI * 2 / 3), PI / 3), 2);
+
+  _system.addColorBall({x:180, y:520}, 5);
+}
+
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Utility.
 // NearColor廃止。なんか用意するかは未定。
+
+function getNextPosition(pos, direction, multiple = 1.0){
+  // posをdirection方向にBALL_RADIUSの2倍の何倍かだけ進ませたところの位置を取得。
+  return {x:pos.x + BALL_SPACE * 2 * cos(direction) * multiplier, y:pos.y + BALL_SPACE * 2 * sin(direction) * multiplier};
+}
+
+function advancePosition(pos, direction, multiplier = 1.0){
+  // posをdirection方向にBALL_RADIUSの2倍の何倍かだけ進ませる。
+  pos.x += BALL_SPACE * 2 * cos(direction) * multiplier;
+  pos.y += BALL_SPACE * 2 * sin(direction) * multiplier;
+  return pos;
+}
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Pattern.

@@ -508,14 +508,20 @@ class System{
   		const _ball = this.balls[ballId];
   		for(let otherId = ballId + 1; otherId < this.balls.length; otherId++){
   			const _other = this.balls[otherId];
-				if(!_ball.alive || !_other.alive){ continue; } // 消えたボールは無視
-  			if(!collisionCheck(_ball, _other)){ continue; } // ぶつからなければ無視
+        // 消えたボールは無視
+				if(!_ball.alive || !_other.alive){ continue; }
+        // ぶつからなければ無視
+  			if(!collisionCheck(_ball, _other)){ continue; }
+        // 双方のスピードが遅すぎるときは無視（これやらないとぶつかってないのにパーティクル出ちゃう）
+      	if(_ball.velocity.mag() < SPEED_LOWER_LIMIT && _other.velocity.mag() < SPEED_LOWER_LIMIT){ continue; }
+        // 衝突処理
   			perfectCollision(_ball, _other);
 				// この時接しているので接点作るのは簡単。
 				const radiusRatio = _ball.radius / (_ball.radius + _other.radius);
 				const collidePoint = {};
 				collidePoint.x = _ball.position.x * (1 - radiusRatio) + _other.position.x * radiusRatio;
 				collidePoint.y = _ball.position.y * (1 - radiusRatio) + _other.position.y * radiusRatio;
+        // 衝突時のパーティクルを生成する
 				this.createParticleAtCollide(_ball, collidePoint);
 				this.createParticleAtCollide(_other, collidePoint);
 				_ball.reaction(this, _other);
@@ -665,8 +671,7 @@ function collisionCheck(_ball, _other){
 // 壁の場合と違って移動距離の合計を質量のファクターで分配するから、同じメソッドは使えなさそう。
 function perfectCollision(_ball, _other){
 	// ballとotherが衝突したときの速度の変化を記述する（面倒なので完全弾性衝突で）
-	// その前に、双方が下限速度の場合は何もしないこととする。
-	if(_ball.velocity.mag() < SPEED_LOWER_LIMIT && _other.velocity.mag() < SPEED_LOWER_LIMIT){ return; }
+
 	// 重心ベクトル
 	const g = getCenterVector(_ball, _other);
 	// 相対速度
