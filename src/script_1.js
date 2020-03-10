@@ -136,7 +136,7 @@ class Ball{
 		this.alive = false;
 		// 強制的に殺す。・・これ使えばdeleteのところにあれこれ書く必要ないな・・。最後のremoveObjectsで消せるやん。
 	}
-	hit(_system, _other){ /* 衝突した際のもろもろ。 */ }
+	reaction(_system, _other){ /* 衝突した際の反応（reaction） */ }
 	update(){
 		this.position.add(this.velocity);
 		this.applyReflection();
@@ -160,7 +160,7 @@ class ColorBall extends Ball{
 		this.colorId = colorId;
 		this.pale = false;
 	}
-	hit(_system, _other){
+	reaction(_system, _other){
 		// カラー同士の場合、色が同じなら発光する。おわり。
 		if(_other.type === "color" && _other.colorId === this.colorId){
 			this.pale = true; this.graphic = this.paleGraphic;
@@ -183,7 +183,7 @@ class IceBall extends Ball{
 		this.paleGraphic = paleGraphic;
 		this.pale = false;
 	}
-	hit(_system, _other){
+	reaction(_system, _other){
 		// 相手が発光していれば発光する。発光しないサンダーとかは変化なし。
 		if((_other.type === "color" || _other.type === "ice") && _other.pale){
 			this.pale = true; this.graphic = this.paleGraphic;
@@ -202,7 +202,7 @@ class ThunderBall extends Ball{
 		super(x, y, ballGraphic, sizeFactor);
 		this.type = "thunder";
 	}
-	hit(_system, _other){
+	reaction(_system, _other){
 		if(_other.type === "color"){
 			for(let _ball of _system.balls){
 				if(_ball.type === "color" && _ball.colorId === _other.colorId){ _ball.kill(); }
@@ -497,8 +497,8 @@ class System{
 				collidePoint.y = _ball.position.y * (1 - radiusRatio) + _other.position.y * radiusRatio;
 				this.createParticleAtCollide(_ball, collidePoint);
 				this.createParticleAtCollide(_other, collidePoint);
-				_ball.hit(this, _other);
-				_other.hit(this, _ball);
+				_ball.reaction(this, _other);
+				_other.reaction(this, _ball);
   		}
   	}
   }
