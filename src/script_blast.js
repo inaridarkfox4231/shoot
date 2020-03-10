@@ -604,6 +604,8 @@ class BallShooter{
   constructor(){
 		this.target = undefined;
 		this.active = false;
+    this.normalX = createVector(1, 0);
+    this.normalY = createVector(0, 1);
 	}
 	isActive(){
 		return this.active; // リリースの時にここを見てactiveならshootする。
@@ -634,13 +636,8 @@ class BallShooter{
 		this.target.setVelocity(speed, direction);
     // releaseはshootのたびに呼び出した方がいいのでここには書かない方がいいと思う。
 	}
-	draw(){
-		if(!this.active){ return; }
-		// 長さの上限はAREA_WIDTH * 0.6（必要なら定数化するけど）.
-		const arrowLength = this.getArrowLength();
-		if(arrowLength <= 0){ return; }
-		const direction = atan2(mouseY - this.target.position.y, mouseX - this.target.position.x);
-		// ここBALL_RADIUSになってるけどthis.target.radiusにしないとだめだね。
+	drawArrow(arrowLength, direction){
+    // 矢印の長さと方向を送る
 		let start = createVector(this.target.radius * cos(direction), this.target.radius * sin(direction));
 		let end = createVector((this.target.radius + arrowLength) * cos(direction), (this.target.radius + arrowLength) * sin(direction));
 		start.add(this.target.position);
@@ -657,6 +654,51 @@ class BallShooter{
 		line(end.x, end.y, lowerArrow.x, lowerArrow.y);
 		noStroke();
 	}
+  drawOrbit(arrowLength, direction){
+    // 軌道直線を、書けたら、書きたい。
+    let p = this.target.position.copy();
+		const speed = arrowLength * SPEED_UPPER_LIMIT / ARROWLENGTH_LIMIT;
+    let v = createVector(speed * cos(direction), speed * sin(direction));
+    const r = this.target.radius;
+    const f = this.target.friction;
+    // pにvを足していって壁につくたびに反射させてvには摩擦を適用し続けて壁にぶつかったところと止まったところの
+    // 点を集めて順繰りに線でつなぐだけ。
+    let pointArray = [];
+    pointArray.push({x:p.x, y:p.y});
+    while(v.mag() >= SPEED_LOWER_LIMIT){
+      p.add(v);
+      if(p.x < r || p.x > AREA_WIDTH - r){
+        const distanceWithWallX = (p.x < r ? p.x : AREA_WIDTH - p.x);
+      	p.sub(p5.Vector.mult(v, (r - distanceWithWallX) / abs(v.x)));
+        v.x *= -1;
+        pointArray.push({x:p.x, y:p.y});
+      }
+      if(p.y < r || p.y > AREA_HEIGHT - r){
+        const distanceWithWallY = (p.y < r ? p.y : AREA_HEIGHT - p.y);
+        p.sub(p5.Vector.mult(v, (r - distanceWithWallY) / abs(v.y)));
+        v.y *= -1;
+        pointArray.push({x:p.x, y:p.y});
+      }
+      v.mult(1 - f);
+    }
+    pointArray.push({x:p.x, y:p.y});
+    stroke(181, 230, 29);
+    strokeWeight(4.0);
+    for(let i = 0; i < pointArray.length - 1; i++){
+      line(pointArray[i].x, pointArray[i].y, pointArray[i + 1].x, pointArray[i + 1].y);
+    }
+    noStroke();
+    fill(255, 128);
+    circle(p.x, p.y, r * 2);
+  }
+  draw(){
+    if(!this.active){ return; }
+    const arrowLength = this.getArrowLength();
+    if(arrowLength <= 0){ return; }
+		const direction = atan2(mouseY - this.target.position.y, mouseX - this.target.position.x);
+    this.drawOrbit(arrowLength, direction);
+    this.drawArrow(arrowLength, direction);
+  }
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
