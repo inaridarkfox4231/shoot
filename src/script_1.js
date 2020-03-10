@@ -270,7 +270,7 @@ class System{
 		// サイズ変更用のカーソルとスライダーを作る。
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
-    const sizeChangeCursor = new Cursor("rect", {w:w * 0.05, h:h * 0.04}, 1.1, color(64));
+    const sizeChangeCursor = new Cursor("circle", {r:w * 0.05}, 1.1, color(64));
 		this.sizeChangeSlider = new LineSlider(1.0, 2.5, sizeChangeCursor, createVector(w * 0.05, h * 0.225), createVector(w * 0.95, h * 0.225));
 		// 初期化時にコンフィグエリアの左上の座標をわたす。
 		this.sizeChangeSlider.initialize(AREA_WIDTH, 0);
