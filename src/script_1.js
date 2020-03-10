@@ -593,9 +593,6 @@ class BallShooter{
     this.normalX = createVector(1, 0);
     this.normalY = createVector(0, 1);
 	}
-	isActive(){
-		return this.active; // リリースの時にここを見てactiveならshootする。
-	}
 	setTarget(_ball){
 		this.target = _ball;
 		this.active = true;

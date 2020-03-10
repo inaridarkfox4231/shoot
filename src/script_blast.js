@@ -26,6 +26,12 @@ p5.DisableFriendlyErrors = true;
 
 let mySystem;
 
+// 摩擦係数：0.001～0.100まで動かしてみる。
+// 速さの下限：0.01～0.50まで動かしてみる。
+// 速さの上限：15.00～30.00まで動かしてみる。んー・・
+
+// じゃあ大きさいじるスライダーを消してこの3つを用意しましょうね。
+
 const AREA_WIDTH =  360;
 const AREA_HEIGHT = AREA_WIDTH * 2.0;
 const GUTTER_PROPORTION = 1 / 12;
@@ -35,10 +41,12 @@ const ORIGIN_BALL_RADIUS = 100; // 画像用の半径。これを元にボール
 const BALL_SPACE = AREA_WIDTH * (1 / 18);
 const BALL_RADIUS = BALL_SPACE * 0.98; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
 const BALL_APPEAR_MARGIN = BALL_SPACE * 0.01; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
-const FRICTION_COEFFICIENT = 0.02; // 摩擦の大きさ（0.01から0.02に上げてみた）
-const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）
 
-const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.08; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
+// いじれるように
+let FRICTION_COEFFICIENT = 0.008; // 摩擦の大きさ（0.01から0.02に上げてみた）0.008
+let SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）0.09
+let SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）18
+
 const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
 // ColorBallの色はパレットから出すことにしました。
@@ -250,10 +258,12 @@ class System{
 		this.shooter = new BallShooter();
 		// ボールの種類関連
 		this.ballKindId = 0;
-		this.ballSizeFactor = 1.0; // サイズ変えてみたい
+		this.ballSizeFactor = 1.0; // サイズ変えてみたい（このプログラムではいじらないよ）
     this.createBallGraphics();
 		// ボールのサイズ調整用
-    this.createSizeChangeSlider();
+    //this.createSizeChangeSlider();
+    // 摩擦係数、速さの下限、速さの上限
+    this.createSlider();
 		// コンフィグ関連
 		this.modeId = 0;
 		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
@@ -287,6 +297,7 @@ class System{
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
 	}
+  /*
 	createSizeChangeSlider(){
 		// サイズ変更用のカーソルとスライダーを作る。
 		const w = CONFIG_WIDTH;
@@ -296,6 +307,27 @@ class System{
 		// 初期化時にコンフィグエリアの左上の座標をわたす。
 		this.sizeChangeSlider.initialize(AREA_WIDTH, 0);
 	}
+  */
+  createSlider(){
+    // 摩擦係数、速さの下限、速さの上限
+    // 摩擦係数：0.001～0.100まで動かしてみる。
+    // 速さの下限：0.01～0.50まで動かしてみる。
+    // 速さの上限：15.00～30.00まで動かしてみる。
+    const w = CONFIG_WIDTH;
+    const h = AREA_HEIGHT;
+    const frictionChangeCursor = new Cursor("circle", {r:w * 0.05}, 1.1, color(64, 32, 255));
+    this.frictionChangeSlider = new LineSlider(0.001, 0.1, frictionChangeCursor,
+                                               createVector(w * 0.05, h * 0.07), createVector(w * 0.95, h * 0.07));
+    const speedLowerLimitChangeCursor = new Cursor("circle", {r:w * 0.05}, 1.1, color(96, 64, 255));
+    this.speedLowerLimitChangeSlider = new LineSlider(0.01, 0.50, speedLowerLimitChangeCursor,
+                                                      createVector(w * 0.05, h * 0.14), createVector(w * 0.95, h * 0.14));
+    const speedUpperLimitChangeCursor = new Cursor("circle", {r:w * 0.05}, 1.1, color(128, 96, 255));
+    this.speedUpperLimitChangeSlider = new LineSlider(15.00, 30.00, speedUpperLimitChangeCursor,
+                                                      createVector(w * 0.05, h * 0.21), createVector(w * 0.95, h * 0.21));
+    this.frictionChangeSlider.initialize(AREA_WIDTH, 0);
+    this.speedLowerLimitChangeSlider.initialize(AREA_WIDTH, 0);
+    this.speedUpperLimitChangeSlider.initialize(AREA_WIDTH, 0);
+  }
 	createButtons(){
 		const w = CONFIG_WIDTH;
 		const h = AREA_HEIGHT;
@@ -369,10 +401,14 @@ class System{
 		this.ballKindId = this.ballButtons.getActiveButtonId();
 	}
 	activateSlider(){
-		this.sizeChangeSlider.activate();
+    this.frictionChangeSlider.activate();
+    this.speedLowerLimitChangeSlider.activate();
+    this.speedUpperLimitChangeSlider.activate();
 	}
 	inActivateSlider(){
-		this.sizeChangeSlider.inActivate();
+    this.frictionChangeSlider.inActivate();
+    this.speedLowerLimitChangeSlider.inActivate();
+    this.speedUpperLimitChangeSlider.inActivate();
 	}
 	addBallCheck(x, y){
 		// ある程度のマージンを持たせて密着しないようにする。
@@ -413,7 +449,6 @@ class System{
 		}
   }
   addColorBall(pos, colorId){
-    console.log(pos);
     const normalGraphic = this.ballGraphic.normal[colorId];
     const paleGraphic = this.ballGraphic.pale[colorId];
     this.balls.push(new ColorBall(pos.x, pos.y, normalGraphic, this.ballSizeFactor, paleGraphic, colorId));
@@ -438,6 +473,7 @@ class System{
   setStage(stageId){
     // すべてのボールをクリアしてから、指定された配置でボールを用意する
     this.clearBall();
+    this.shooter.release();
     window["createStage" + stageId.toString()](this);
   }
   clearBall(){
@@ -511,8 +547,14 @@ class System{
 		}
 	}
   update(){
-		this.sizeChangeSlider.update();
-		this.ballSizeFactor = this.sizeChangeSlider.getValue();
+		//this.sizeChangeSlider.update();
+    this.frictionChangeSlider.update();
+    this.speedLowerLimitChangeSlider.update();
+    this.speedUpperLimitChangeSlider.update();
+		//this.ballSizeFactor = this.sizeChangeSlider.getValue();
+    FRICTION_COEFFICIENT = this.frictionChangeSlider.getValue();
+    SPEED_LOWER_LIMIT = this.speedLowerLimitChangeSlider.getValue();
+    SPEED_UPPER_LIMIT = this.speedUpperLimitChangeSlider.getValue();
     for(let b of this.balls){ b.update(); }
 		this.particles.update(); // particleのupdate.
   }
@@ -558,6 +600,11 @@ class System{
     for(let b of this.balls){ b.draw(); }
 		this.particles.draw(); // particleのdraw.
     this.shooter.draw(); // うまくいくか
+    fill(255);
+    textSize(16);
+    text("friction:" + FRICTION_COEFFICIENT.toFixed(3), 20, 20);
+    text("speedLower:" + SPEED_LOWER_LIMIT.toFixed(3), 20, 40);
+    text("speedUpper:" + SPEED_UPPER_LIMIT.toFixed(3), 20, 60);
     this.drawConfig();
   }
   drawConfig(){
@@ -568,12 +615,17 @@ class System{
 		const h = AREA_HEIGHT;
 		// 先にボールサイズ用のエリア(h * 0.0～h * 2.5のところ)
 		// 最初にw * 0.3, h * 1.0のところに出現させるボールを表示する。
+    /*
 		gr.image(this.ballGraphic.normal[this.ballKindId],
 			       w * 0.5 - BALL_RADIUS * this.ballSizeFactor * 1.2, h * 0.1 - BALL_RADIUS * this.ballSizeFactor * 1.2,
 						 BALL_RADIUS * this.ballSizeFactor * 2.4, BALL_RADIUS * this.ballSizeFactor * 2.4,
 					   0, 0, ORIGIN_BALL_RADIUS * 2.4, ORIGIN_BALL_RADIUS * 2.4);
+    */
 		// スライダーの描画。
-    this.sizeChangeSlider.draw(gr);
+    //this.sizeChangeSlider.draw(gr);
+    this.frictionChangeSlider.draw(gr);
+    this.speedLowerLimitChangeSlider.draw(gr);
+    this.speedUpperLimitChangeSlider.draw(gr);
 		// 全部同じ色でいいよ。茶色かなんかで。で、違うときは暗くする。
 		// これでいいんだけど、今まで通りのこの方法だとマウスクリックとの紐付けが非常に面倒なので、何とかしたいです。
 		// ボタンをクラス化しました～
@@ -606,9 +658,6 @@ class BallShooter{
 		this.active = false;
     this.normalX = createVector(1, 0);
     this.normalY = createVector(0, 1);
-	}
-	isActive(){
-		return this.active; // リリースの時にここを見てactiveならshootする。
 	}
 	setTarget(_ball){
 		this.target = _ball;
@@ -1712,6 +1761,12 @@ function mouseReleased(){
 			break;
 	}
   return false;
+}
+
+function keyTyped(){
+  if(key === "z"){
+    mySystem.setStage(0);
+  }
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
