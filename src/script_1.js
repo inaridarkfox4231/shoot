@@ -239,9 +239,10 @@ class HeavyBall extends Ball{
 
 class System{
   constructor(){
-		// 背景
+		// 背景とガターの作成
 		this.boardId = 0;
 		this.boardGraphic = createBoardGraphic(); // 背景工夫したいねって
+    this.gutters = createGutter(); // それぞれの背景に対するガターを作る感じ。
 		// ボール
     this.balls = [];
 		// ボール動かす用
@@ -531,16 +532,14 @@ class System{
   }
   applyGutter(){
 		for(let b of this.balls){
-			if(b.position.y < AREA_HEIGHT * GUTTER_PROPORTION || b.position.y > AREA_HEIGHT * (1 - GUTTER_PROPORTION)){ b.kill(); }
+      if(this.gutters[this.boardId].hit(b.position)){ b.kill(); };
 		}
 	}
   draw(){
 		// 背景描画
 		image(this.boardGraphic.active[this.boardId], 0, 0);
     // ガター描画
-		fill(0);
-		rect(0, 0, AREA_WIDTH, AREA_HEIGHT * GUTTER_PROPORTION);
-		rect(0, AREA_HEIGHT * (1 - GUTTER_PROPORTION), AREA_WIDTH, AREA_HEIGHT);
+    this.gutters[this.boardId].draw();
     // ボール描画
     for(let b of this.balls){ b.draw(); }
 		this.particles.draw(); // particleのdraw.
@@ -669,7 +668,7 @@ class BallShooter{
       v.mult(1 - f);
     }
     pointArray.push({x:p.x, y:p.y});
-    stroke(181, 230, 29);
+    stroke(255, 192);
     strokeWeight(4.0);
     for(let i = 0; i < pointArray.length - 1; i++){
       line(pointArray[i].x, pointArray[i].y, pointArray[i + 1].x, pointArray[i + 1].y);
@@ -816,6 +815,27 @@ function createBoardGraphic(){
 	inActiveGrArray.push(starLikeBoard(w, h, 50));
 	inActiveGrArray.push(ellipseLikeBoard(w, h, 50));
 	return {active:activeGrArray, inActive:inActiveGrArray};
+}
+
+// それぞれの背景に対するガター
+function createGutter(){
+  const w = AREA_WIDTH;
+  const h = AREA_HEIGHT;
+  let gutter0 = new Gutter(); // ガターなし
+  let gutter1 = new Gutter();
+  gutter1.regist(0, 0, w, h / 12)
+         .regist(0, h * 11 / 12, w, h / 12);
+  let gutter2 = new Gutter();
+  gutter2.regist(0, 0, w * 0.2, h * 0.2)
+         .regist(w * 0.8, h * 0.8, w * 0.2, h * 0.2);
+  let gutter3 = new Gutter();
+  gutter3.regist(w * 0.4, 0, w * 0.2, h * 0.1)
+         .regist(0, h * 0.4, w * 0.1, h * 0.2)
+         .regist(w * 0.9, h * 0.4, w * 0.1, h * 0.2)
+         .regist(w * 0.4, h * 0.9, w * 0.2, h * 0.1);
+  gutter4 = new Gutter();
+  gutter4.regist(w * 0.425, h * 0.425, w * 0.15, h * 0.15);
+  return [gutter0, gutter1, gutter2, gutter3, gutter4];
 }
 
 // 背景いろいろ～
@@ -1700,6 +1720,35 @@ function mouseReleased(){
 			break;
 	}
   return false;
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// Gutter.
+// ガーターはrectデータの集合で、hitで調べてballに対してtrue/falseを返しtrueならballをkillする。
+// 描画についてはまあそれなりに。
+
+// updateって何・・gutterが移動するってこと？？面白そうね（（（
+
+class Gutter{
+  constructor(){
+    this.gutterArea = [];
+  }
+  regist(left, top, w, h){
+    this.gutterArea.push({left, top, w, h});
+    return this;
+  }
+  hit(pos){
+    for(const gtr of this.gutterArea){
+      if(gtr.left < pos.x && pos.x < gtr.left + gtr.w && gtr.top < pos.y && pos.y < gtr.top + gtr.h){ return true; }
+    }
+    return false;
+  }
+  draw(){
+    fill(0);
+    for(const gtr of this.gutterArea){
+      rect(gtr.left, gtr.top, gtr.w, gtr.h);
+    }
+  }
 }
 
 
