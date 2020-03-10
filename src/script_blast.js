@@ -27,13 +27,13 @@ p5.DisableFriendlyErrors = true;
 let mySystem;
 
 const AREA_WIDTH =  360;
-const AREA_HEIGHT = AREA_WIDTH * 1.5;
-const GUTTER_PROPORTION = 0.1;
+const AREA_HEIGHT = AREA_WIDTH * 2.0;
+const GUTTER_PROPORTION = 1 / 9;
 
 const ORIGIN_BALL_RADIUS = 100; // 画像用の半径。これを元にボール画像を作って、個別の描画ではこれを渡して適切に拡縮して使う。
 
-const BALL_RADIUS = AREA_WIDTH * 0.048; // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
-const BALL_APPEAR_MARGIN = AREA_WIDTH * 0.001; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
+const BALL_RADIUS = AREA_WIDTH * (1 / 18); // ボールの半径は0.045くらいにする。配置するときは0.05だと思って配置する。隙間ができる。OK!
+const BALL_APPEAR_MARGIN = BALL_RADIUS * 0.001; // ボールの直径が0.1の中の0.09になるように配置するイメージで設定している。
 const FRICTION_COEFFICIENT = 0.02; // 摩擦の大きさ（0.01から0.02に上げてみた）
 const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）
 
@@ -1021,7 +1021,7 @@ function createColorButtonGraphic(w, h, buttonColor, paleRatio = 0.0, innerText 
 
 	if(innerText === ""){ return gr; }
 	gr.fill(0);
-	gr.textSize(h / 2);
+	gr.textSize(h * 0.4);
 	gr.textAlign(CENTER, CENTER);
 	gr.text(innerText, w / 2, h / 2);
 	return gr;
