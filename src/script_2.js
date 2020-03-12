@@ -1,40 +1,24 @@
+// スピンオフ企画
+// 正方形のエリア
+// 中心に向かって加速度が生じている（いろいろ調整）
+// コンフィグは全部廃止、ガターも廃止
+// 代わりとしての地形効果。
+// 地形効果だけ残す・・？背景選択は残してみるか。
+// 背景ごとに地形効果を変えて実験してみようか。背景選択を縦並びにして。面白そう。
+// 4種類のカラーボールが周囲のエリアに自然発生する
+// 上限30個
+// 少ないほど出やすい
+// よって衝突が起こりやすい
+// たのしいたのしいボールの遊び
+
 p5.DisableFriendlyErrors = true;
 "use strict";
 
-// テストモード。
-// 自由にボールを追加、削除できるようにし、どのボールも引っ張って動かせるようにする。
-// その際、追加するボールの質量、摩擦係数、などをいじれるようにした方がいいかも。
-// って思ったけど気が向いたらでいいや。
-
-// そのうち手玉作ってそれ以外動かせないようにするか、
-// もしくは今背景変えてるところでモードを変えるとか？んー・・
-// 手玉しか動かせないならどこでマウスダウンしても矢印出た方がよさそう
-
-// ボールの衝突音をhttps://soundeffect-lab.info/sound/various/various3.htmlさんの効果音ラボから拝借しました。
-// 有難く使わせていただきたいと思います。感謝します！
-
-
-// 課題
-// オーバーヘッドの負荷が重いのをなんとかしたいのと
-// パーティクル出す、NearColorで星型でいいです。NearColorはあそこから取り出す。ボールの色。
-// パーティクルはhopプロパティがonのときにジャンプするようにしたい。
-// あと画像貼り付けでやりたいけどいいのかな（負荷が分からん）
-
-// 大きさの違うボール同士の衝突も実装してみたい
-// そこまではやる（再利用したいし）
-// エネルギーが失われる衝突とか実装してみたい（反発係数を実装する）
-
-// 2020.03.12.
-// 今後の課題：バウンドボールの実装
-// restitutionを設けて、これを当たった際の相手の反射処理に反映させる
-// バウンドボールはこれが1.2で当たったボールを高いバウンドで跳ね返す
-// 逆にヘビーボールのバウンドを0.8位にする感じ・・壁についてはすべて1.0でいいです。
-
 let mySystem;
 
-const AREA_WIDTH =  360;
-const AREA_HEIGHT = AREA_WIDTH * 1.5;
-const GUTTER_PROPORTION = 0.1;
+const AREA_WIDTH =  640;
+const AREA_HEIGHT = AREA_WIDTH * 1.0;
+//const GUTTER_PROPORTION = 0.1;
 
 const ORIGIN_BALL_RADIUS = 100; // 画像用の半径。これを元にボール画像を作って、個別の描画ではこれを渡して適切に拡縮して使う。
 
@@ -44,7 +28,7 @@ const FRICTION_COEFFICIENT = 0.02; // 摩擦の大きさ（0.01から0.02に上�
 const SPEED_LOWER_LIMIT = AREA_WIDTH * 0.00025; // 速さの下限（これ以下になったら0として扱う）
 
 const SPEED_UPPER_LIMIT = AREA_WIDTH * 0.05; // セットするスピードの上限。横幅の5%でいく。（ちょっと下げる）
-const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
+//const ARROWLENGTH_LIMIT = AREA_WIDTH * 0.6; // 矢印の長さの上限
 
 // ColorBallの色はパレットから出すことにしました。
 // 順に赤、オレンジ、黄色、緑、水色、青、紫、ピンク。その次は"#32cd32"（黄緑）でモード選択用。
@@ -58,7 +42,7 @@ const COLOR_PALETTE = ["#ff0000", "#ffa500", "#ffff00", "#008000", "#00bfff", "#
 // とかしてその値を使うことになるかな・・
 const BALL_CAPACITY = 30; // 30個まで増やせるみたいな。
 
-const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
+//const CONFIG_WIDTH = AREA_WIDTH * 0.6; // コンフィグの横幅は舞台の60%位を想定。
 
 // particle関連
 let particlePool;
@@ -82,7 +66,8 @@ function preload(){
 }
 
 function setup(){
-	createCanvas(AREA_WIDTH + CONFIG_WIDTH, AREA_HEIGHT);
+	//createCanvas(AREA_WIDTH + CONFIG_WIDTH, AREA_HEIGHT);
+	createCanvas(AREA_WIDTH, AREA_HEIGHT);
   //colorMode(HSB, 100);
 	noStroke();
 	particlePool = new ObjectPool(() => { return new Particle(); }, 512);
@@ -93,7 +78,7 @@ function setup(){
 function draw(){
   mySystem.update();
   mySystem.applyCollide();
-	mySystem.applyGutter();
+	//mySystem.applyGutter();
   mySystem.draw();
 	mySystem.removeObjects();
 }
@@ -181,6 +166,9 @@ class ColorBall extends Ball{
 	}
 }
 
+// 他のボールは使わない
+
+/*
 // 相手が発光しているときに衝突すると自身も発光する。それだけ。
 // あと今気付いたけど動きが止まると消えるみたい。
 // Thunderとかは発光しないで消滅するから不要よね。
@@ -239,6 +227,7 @@ class HeavyBall extends Ball{
 
 // 手玉は継承で書く・・？衝突時のアクションが皆無だからBallでいいかも。
 // 穴に落ちて消えるにしてもそれを書くのはここじゃないでしょう。
+*/
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // System.
@@ -248,31 +237,34 @@ class System{
 		// 背景とガターの作成
 		this.boardId = 0;
 		this.boardGraphic = createBoardGraphic(); // 背景工夫したいねって
-    this.gutters = createGutter(); // それぞれの背景に対するガターを作る感じ。
+    //this.gutters = createGutter(); // それぞれの背景に対するガターを作る感じ。
 
 		// ボール
     this.balls = [];
 		// ボール動かす用
-		this.shooter = new BallShooter();
+		//this.shooter = new BallShooter();
 		// ボールの種類関連
-		this.ballKindId = 0;
+		//this.ballKindId = 0;
+
+    // サイズはスライダー使わないで自動的に変わるようにする
 		this.ballSizeFactor = 1.0; // サイズ変えてみたい
     this.createBallGraphics();
-
 		// ボールのサイズ調整用
-    this.createSizeChangeSlider();
+    //this.createSizeChangeSlider();
 
 		// コンフィグ関連
-		this.modeId = 0;
-		this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
-	  this.createButtons();
+		//this.modeId = 0;
+		//this.configGraphic = createConfigGraphic();  // コンフィグエリアのグラフィック
+	  //this.createButtons();
 
 		// パーティクル関連
 		this.particles = new ParticleSystem();
   }
+  /*
 	getModeId(){
 		return this.modeId;
 	}
+  */
 	createBallGraphics(){
 		// ボール画像. normalとpaleの2種類。
 		this.ballGraphic = {};
@@ -283,6 +275,7 @@ class System{
 			this.ballGraphic.normal.push(createColorBallGraphic(i));
 			this.ballGraphic.pale.push(createColorBallGraphic(i, 0.7)); // 0.7はpaleRatioでこれにより薄くなる感じ。
 		}
+    /*
 		// アイスボールのグラフィック(8)
 		this.ballGraphic.normal.push(createIceBallGraphic());
 		this.ballGraphic.pale.push(createIceBallGraphic(0.5));
@@ -292,10 +285,12 @@ class System{
 		// ヘビーボールのグラフィック(10)
 		this.ballGraphic.normal.push(createHeavyBallGraphic());
 		this.ballGraphic.pale.push(createHeavyBallGraphic(0.5));
+    */
 		// 8, 9, 10, 11は今後・・
 		// このあと種類を増やすことを考えると、colorIdよりballKindIdとした方が意味的にいいと思う。
 		// で、0～7をColorBall生成時の色のidとして採用すればいい。
 	}
+  /*
 	createSizeChangeSlider(){
 		// サイズ変更用のカーソルとスライダーを作る。
 		const w = CONFIG_WIDTH;
@@ -383,6 +378,7 @@ class System{
 	inActivateSlider(){
 		this.sizeChangeSlider.inActivate();
 	}
+  */
 	addBallCheck(x, y){
 		// ある程度のマージンを持たせて密着しないようにする。
 		// 最初に個数の確認
@@ -403,6 +399,7 @@ class System{
 		// もろもろ潜り抜けたらOK.
 		return true;
 	}
+  /*
   addBall(x, y){
     // Ballを追加する
 		if(this.ballKindId < 8){
@@ -420,12 +417,14 @@ class System{
 				break;
 		}
   }
+  */
   addColorBall(x, y, colorId){
     const normalGraphic = this.ballGraphic.normal[colorId];
     const paleGraphic = this.ballGraphic.pale[colorId];
     this.balls.push(new ColorBall(x, y, normalGraphic, this.ballSizeFactor, paleGraphic, colorId));
     return this;
   }
+  /*
   addIceBall(x, y){
     const normalGraphic = this.ballGraphic.normal[8];
     const paleGraphic = this.ballGraphic.pale[8];
@@ -442,6 +441,8 @@ class System{
     this.balls.push(new HeavyBall(x, y, normalGraphic, this.ballSizeFactor));
     return this;
   }
+  */
+  /*
   findBall(x, y){
     // Ballが(x, y)にあるかどうか調べてあればそのボールを返すがなければundefinedを返す。
     for(let i = 0; i < this.balls.length; i++){
@@ -466,6 +467,7 @@ class System{
 		// idでなくball自体を渡すべき？か・・排除は最後にやるし。ここではkillするだけでいいね。
 		_ball.kill();
   }
+  */
 	createParticleAtRemove(_ball){
 		// ボールを排除するときのparticle出力
 		const {x, y} = _ball.position;
@@ -509,8 +511,8 @@ class System{
 		}
 	}
   update(){
-		this.sizeChangeSlider.update();
-		this.ballSizeFactor = this.sizeChangeSlider.getValue();
+		//this.sizeChangeSlider.update();
+		//this.ballSizeFactor = this.sizeChangeSlider.getValue();
     for(let b of this.balls){ b.update(); }
 		this.particles.update(); // particleのupdate.
   }
@@ -540,22 +542,25 @@ class System{
   		}
   	}
   }
+  /*
   applyGutter(){
 		for(let b of this.balls){
       if(this.gutters[this.boardId].hit(b.position)){ b.kill(); };
 		}
 	}
+  */
   draw(){
 		// 背景描画
 		image(this.boardGraphic.active[this.boardId], 0, 0);
     // ガター描画
-    this.gutters[this.boardId].draw();
+    //this.gutters[this.boardId].draw();
     // ボール描画
     for(let b of this.balls){ b.draw(); }
 		this.particles.draw(); // particleのdraw.
-    this.shooter.draw(); // うまくいくか
-    this.drawConfig();
+    //this.shooter.draw(); // うまくいくか
+    //this.drawConfig();
   }
+  /*
   drawConfig(){
 		// ここでconfigGraphicをいじる、というかここは毎フレーム描く。
 		let gr = this.configGraphic;
@@ -578,6 +583,7 @@ class System{
 		this.ballButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
+  */
 	removeObjects(){
 		// killされたボールの排除やパーティクルの排除などを行う。
 		for(let i = this.balls.length - 1; i >= 0; i--){
@@ -591,6 +597,101 @@ class System{
 	}
 }
 
+// -------------------------------------------------------------------------------------------------------------------- //
+// GroundEffect.
+// 地形効果。
+
+class GroundEffect{
+  constructor(){}
+  applyGroundEffect(_ball){}
+}
+
+class AntLion extends GroundEffect{
+  constructor(attractionRatio = 0.0001){
+    super();
+    this.attraction = AREA_WIDTH * attractionRatio;
+  }
+  applyGroundEffect(_ball){
+    const directionToCenter = atan2(AREA_HEIGHT * 0.5 - _ball.position.y, AREA_WIDTH * 0.5 - _ball.position.x);
+    _ball.velocity.x += this.attraction * cos(directionToCenter);
+    _ball.velocity.y += this.attraction * sin(directionToCenter);
+    if(_ball.velocity.mag() > SPEED_UPPER_LIMIT){
+      const direction = _ball.velocity.heading();
+      _ball.setVelocity(SPEED_UPPER_LIMIT, direction);
+    }
+  }
+}
+
+// -------------------------------------------------------------------------------------------------------------------- //
+// Pattern.
+// パターンを作ります。
+
+// kindMax:全部で何種類まで出すか
+// interval:何フレームおきに出すか。
+// 共通のメソッドとして、ランダムで位置を決める際のあれこれ、位置を決めたとしてそれで大丈夫、ああそれSystemの方に書いたっけ。
+// 何回か試せばいいよ。周囲でお願いね。
+class BallGenerator{
+  constructor(kindMax, interval){
+    this.kindMax = kindMax;
+    this.kindRatio = new Array(kindMax);  //
+    this.interval = interval;
+    this.properFrameCount = 0;
+  }
+  calcGeneratePosition(_system){
+    // 発生位置の計算。多分物による。位置を返す{x:x, y:y}.
+    // 万が一発生させられない時はundefinedを返す。
+    return undefined;
+  }
+  generate(_system){
+    const position = this.calcGeneratePosition(_system);
+    if(position === undefined){ return; } // 発生失敗
+
+    // デフォルトとして1を用意しておく。0があっても計算できるように。大小関係は変わらないから問題ないでしょ。
+    this.kindRatio.fill(1);
+    for(const b of _system.balls){ this.kindRatio[b.colorId]++; }
+    // 数の割合の逆数を取って全部足して100との比から割合を出す。
+    for(let i = 0; i < this.kindMax; i++){ this.kindRatio[i] = 1 / this.kindRatio[i]; }
+    const ratioSum = this.kindRatio.reduce((x, y) => { return x + y; });
+    for(let i = 0; i < this.kindMax; i++){ this.kindRatio[i] = floor(this.kindRatio[i] / ratioSum); }
+    // バリデーション配列(0～1)。ここに0番目が出る確率、0か1番目が出る確率、・・って入れてく。最後は1っぽい。
+    let validationArray = [];
+    let tmp = 0;
+    for(let i = 0; i < this.kindMax; i++){
+      tmp += this.kindRatio[i];
+      validationArray.push(tmp);
+    }
+    const r = random(1);
+    for(let i = 0; i < this.kindMax; i++){
+      if(r > validationArray[i]){ continue; }
+      _system.addColorBall(position.x, position.y, i);
+      return;
+    }
+    // なんか変な時はとりあえず最後のを。
+    _system.addColorBall(position.x, position.y, this.kindMax - 1);
+    return;
+  }
+  update(){
+    this.properFrameCount++;
+    if(this.properFrameCount === this.interval){
+      this.generate();
+      this.properFrameCount = 0;
+    }
+  }
+}
+
+// 周囲に発生させる感じ。
+class AroundBallGenerator extends BallGenerator{
+  constructor(kindNum, interval){
+    super(kindNum, interval);
+  }
+  calcGeneratePosition(_system){
+    // 壁から一定距離のすべての位置を走査してどっかから出す感じ。
+    
+  }
+}
+
+
+/*
 // -------------------------------------------------------------------------------------------------------------------- //
 // BallShooter.
 // 煩雑になりそうなのでコンポジットにします（その方がいい）（カオスになる）
@@ -693,6 +794,7 @@ class BallShooter{
     this.drawArrow(arrowLength, direction);
   }
 }
+*/
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Functions for collide.
@@ -824,6 +926,7 @@ function createBoardGraphic(){
 	return {active:activeGrArray, inActive:inActiveGrArray};
 }
 
+/*
 // それぞれの背景に対するガター
 function createGutter(){
   const w = AREA_WIDTH;
@@ -844,6 +947,7 @@ function createGutter(){
   gutter4.regist(w * 0.425, h * 0.425, w * 0.15, h * 0.15);
   return [gutter0, gutter1, gutter2, gutter3, gutter4];
 }
+*/
 
 // 背景いろいろ～
 // 長方形ぐるぐる
@@ -935,6 +1039,7 @@ function ellipseLikeBoard(w, h, blt){
 	return gr;
 }
 
+/*
 // ConfigBoard. もろもろは毎度更新するのでベースだけ。
 function createConfigGraphic(){
 	let gr = createGraphics(CONFIG_WIDTH, AREA_HEIGHT);
@@ -942,6 +1047,7 @@ function createConfigGraphic(){
 	gr.noStroke();
 	return gr;
 }
+*/
 
 // maxSaturationから0に近づけていくグラデーション。
 // あえて若干大きめに取ってあります。
@@ -968,6 +1074,7 @@ function createColorBallGraphic(colorId, paleRatio = 0.0){
 	return gr;
 }
 
+/*
 // アイスボール作ろうぜ
 function createIceBallGraphic(paleRatio = 0.0){
 	// まずradiusの20%まで外側から水色→白のグラデーションで30分割くらいで円弧を描く（noFill）
@@ -1125,6 +1232,7 @@ function createSpecialBallButtonGraphic(w, h, ballGraphic, paleRatio = 0.0){
 // hueはやめてパレットには16進数コードを載せておく。これ使ってボールの画像とか作る。ボール画像はwhiteとの距離を縮めることで
 // 発光時のグラフィックを作れるようにしよう。
 // ボードの方は色暗くしたけど、こっちは逆にinActiveなときは色を薄くしたい。ボールと揃えたいね。以上。
+*/
 
 // ---------------------------------------------------------------------------------------- //
 // drawFunction.
@@ -1192,6 +1300,7 @@ function drawCross(x, y, radius, rotationAngle, shapeColor){
 
 // アニメ要らんわ
 
+/*
 class Button{
 	constructor(left, top, w, h){
 		this.left = left;
@@ -1263,6 +1372,9 @@ class NormalButton extends Button{
 		}
 	}
 }
+*/
+
+/*
 
 // ボタンを集めただけ。配列。
 class ButtonSet{
@@ -1272,7 +1384,7 @@ class ButtonSet{
 		//this.activeButtonId = 0;
 	}
 	initialize(offSetX, offSetY){
-	  /* 初期化 */
+	  // 初期化
 		for(let btn of this.buttons){
 			btn.setOffSet(offSetX, offSetY);
 		}
@@ -1294,7 +1406,9 @@ class ButtonSet{
 		}
 		return -1;
 	}
-	activate(){ /* ボタンのactivate関連処理 */ }
+	activate(){
+    // ボタンのactivate関連処理
+  }
 	draw(gr){
 		// ボタンが多い場合に・・表示工夫したり必要なんかな。
 		for(let btn of this.buttons){ btn.draw(gr); }
@@ -1348,6 +1462,7 @@ class MultiButtonSet extends ButtonSet{
 		this.activeState[targetButtonId] = btn.active;
 	}
 }
+*/
 
 // ---------------------------------------------------------------------------------------- //
 // Particle and ParticleSystem.
@@ -1539,6 +1654,8 @@ class CrossReferenceArray extends Array{
 // offSetX, offSetYのプロパティを追加。コンフィグエリアの位置情報がないとhitをきちんと実行できない。
 
 // スライダー。
+
+/*
 class Slider{
   constructor(minValue, maxValue, cursor){
     this.minValue = minValue;
@@ -1547,7 +1664,7 @@ class Slider{
     this.active = false;
   }
   initialize(offSetX, offSetY){
-    /* カーソルの初期位置を決める */
+    // カーソルの初期位置を決める
     // offSetX, offSetYはスライダーを置くエリアのleftとtopに当たるポイント。hitのところであれする。
     this.offSetX = offSetX;
     this.offSetY = offSetY;
@@ -1560,11 +1677,19 @@ class Slider{
   inActivate(){
     this.active = false;
   }
-  getValue(){ /* カーソルの位置と自身のレールデータから値を取り出す処理。形状による。 */ }
-  update(){ /* activeであればmouseIsPressedである限りカーソルの位置を更新し続ける */ }
-  draw(gr){ /* レールの形状がスライダーによるのでここには何も書けない */ }
+  getValue(){
+    // カーソルの位置と自身のレールデータから値を取り出す処理。形状による。
+  }
+  update(){
+    // activeであればmouseIsPressedである限りカーソルの位置を更新し続ける
+  }
+  draw(gr){
+    // レールの形状がスライダーによるのでここには何も書けない
+  }
 }
+*/
 
+/*
 // startとendは位置ベクトルで、それぞれがminとmaxに対応する。
 class LineSlider extends Slider{
   constructor(minValue, maxValue, cursor, start, end){
@@ -1679,6 +1804,7 @@ function createCircleCursorGraphic(r, cursorColor){
   }
   return gr;
 }
+*/
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Interaction.
@@ -1689,6 +1815,7 @@ function createCircleCursorGraphic(r, cursorColor){
 // 設定する速さはMAX30位、矢印の長さはAREA_WIDTHの半分まで伸びる感じで。色は黒系で長いほど濃くなるイメージで。
 
 // MOVE, 面倒なのでボール位置からマウス位置に向かわせる。
+/*
 function mousePressed(){
 	const x = mouseX;
 	const y = mouseY;
@@ -1698,17 +1825,17 @@ function mousePressed(){
 	if(x > AREA_WIDTH){ return; }
 	switch(mySystem.getModeId()){
 		case 0:
-		  /* ADD */
+		  // ADD
 			if(mySystem.addBallCheck(x, y)){ mySystem.addBall(x, y); }
 			break;
 		case 1:
-		  /* MOVE */
+		  // MOVE
 			const shootingBall = mySystem.findBall(x, y);
 			//if(shootingBall !== undefined){ mySystem.setShootingBall(shootingBall); }
 			if(shootingBall){ mySystem.setShootingBall(shootingBall); }
 			break;
 		case 2:
-		  /* DELETE */
+		  // DELETE
 			const deletingBall = mySystem.findBall(x, y);
 			//if(deletingBall !== undefined){ mySystem.deleteBall(deletingBall); }
 			if(deletingBall){ mySystem.deleteBall(deletingBall); }
@@ -1716,18 +1843,20 @@ function mousePressed(){
 	}
   return false;
 }
+*/
 
-
+/*
 function mouseReleased(){
 	mySystem.inActivateSlider();
 	switch(mySystem.getModeId()){
 		case 1:
-		  /* MOVE */
+		  // MOVE
 			mySystem.shootBall();
 			break;
 	}
   return false;
 }
+*/
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Gutter.
@@ -1736,6 +1865,7 @@ function mouseReleased(){
 
 // updateって何・・gutterが移動するってこと？？面白そうね（（（
 
+/*
 class Gutter{
   constructor(){
     this.gutterArea = [];
@@ -1757,28 +1887,10 @@ class Gutter{
     }
   }
 }
-
+*/
 
 // -------------------------------------------------------------------------------------------------------------------- //
 // Utility.
 // ボール打ち出すときに誘導線作れたらいいんだけどね。
 // 透明度のある黒い線を引くの。ゴール地点まで。strokeWeightは5.0くらいで。
 // ボールの位置の・・あー、これshooterがやるべきやな・・ここに書くのは補助関数とか？
-
-// -------------------------------------------------------------------------------------------------------------------- //
-// Pattern.
-// まあ、ボール作って速度与えてってやろうと思えばできるからね・・インタラクションないけど面白いとは思う（わからんけどね）。
-// はい。冗談おわり。デバッグしようね・・・
-
-// だめだ。めり込み処理やらないとおかしなことになる（特に見栄えが）。
-// ちゃんと動いてるけどね・・きびしいな・・・
-
-// 重心座標系でやるの？なるほど・・なんかおかしいと思った。じゃあuとvをそういうものとしてやるのね。んー・・むぅ。
-// よく考えたら速度についてはいじってないんだっけね。
-
-// だからー、壁の場合はそのままでいいんだけど、ぶつかる場合は、positionのずらし方を変える。
-// 接するところまで戻す。で、そのうえで接触面を計算して、反射させるんだね（複雑・・）
-
-// 多分接するところまで戻せたはず。さて、本題に入るんだが・・（気力）
-
-// めり込む処理間違ってたので修正しました。正しいかどうかはcollision部分を抜き出して別のプログラムを作る必要がありそうです。おわり。
