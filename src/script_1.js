@@ -92,10 +92,7 @@ function setup(){
 
 function draw(){
   mySystem.update();
-  mySystem.applyCollide();
-	mySystem.applyGutter();
   mySystem.draw();
-	mySystem.removeObjects();
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
@@ -513,6 +510,9 @@ class System{
 		this.ballSizeFactor = this.sizeChangeSlider.getValue();
     for(let b of this.balls){ b.update(); }
 		this.particles.update(); // particleのupdate.
+    this.applyCollide();
+  	this.applyGutter();
+  	this.removeObjects();
   }
   applyCollide(){
     for(let ballId = 0; ballId < this.balls.length; ballId++){
@@ -544,6 +544,17 @@ class System{
 		for(let b of this.balls){
       if(this.gutters[this.boardId].hit(b.position)){ b.kill(); };
 		}
+	}
+  removeObjects(){
+		// killされたボールの排除やパーティクルの排除などを行う。
+		for(let i = this.balls.length - 1; i >= 0; i--){
+			const _ball = this.balls[i];
+			if(!_ball.alive){
+				this.balls.splice(i, 1);
+				this.createParticleAtRemove(_ball);
+			}
+		}
+		this.particles.remove();
 	}
   draw(){
 		// 背景描画
@@ -578,17 +589,6 @@ class System{
 		this.ballButtons.draw(gr);
 		image(this.configGraphic, AREA_WIDTH, 0);
   }
-	removeObjects(){
-		// killされたボールの排除やパーティクルの排除などを行う。
-		for(let i = this.balls.length - 1; i >= 0; i--){
-			const _ball = this.balls[i];
-			if(!_ball.alive){
-				this.balls.splice(i, 1);
-				this.createParticleAtRemove(_ball);
-			}
-		}
-		this.particles.remove();
-	}
 }
 
 // -------------------------------------------------------------------------------------------------------------------- //
